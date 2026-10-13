@@ -1,0 +1,143 @@
+@model EMPTRACK.Models.Notification
+
+@{
+    ViewData["Title"] = "Notification Details";
+    var isManagementUser =
+        User.IsInRole("Admin") ||
+        User.IsInRole("HR Head") ||
+        User.IsInRole("HR") ||
+        User.IsInRole("Head Manager") ||
+        User.IsInRole("Manager");
+}
+
+<div class="container-fluid">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["SuccessMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Notification Details</h1>
+            <p class="text-muted mb-0">
+                Notification
+            </p>
+        </div>
+
+        <a asp-action="Index"
+           class="btn btn-outline-secondary">
+            Back
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <strong>Notification</strong>
+                </div>
+
+                <div class="card-body">
+                    <h4 class="mb-3">
+                        @Model.Title
+                    </h4>
+
+                    @if (isManagementUser)
+                    {
+                        <div class="mb-4">
+                            <div class="small text-muted mb-1">
+                                Employee
+                            </div>
+
+                            <strong>
+                                @Model.Employee.FirstName
+                                @Model.Employee.LastName
+                            </strong>
+
+                            <div class="small text-muted">
+                                @Model.Employee.EmployeeCode
+                            </div>
+                        </div>
+                    }
+
+                    <div>
+                        <div class="small text-muted mb-1">
+                            Message
+                        </div>
+
+                        <div class="border rounded p-3"
+                             style="white-space: pre-wrap;">
+                            @Model.Message
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <strong>Status</strong>
+                </div>
+
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">
+                            Status
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @if (Model.IsRead)
+                            {
+                                <span class="badge bg-success">
+                                    Read
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    Unread
+                                </span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Created
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.CreatedAt.ToString("dd MMM yyyy")
+
+                            <div class="small text-muted">
+                                @Model.CreatedAt.ToString("hh:mm tt")
+                            </div>
+                        </dd>
+                    </dl>
+
+                    @if (!isManagementUser && !Model.IsRead)
+                    {
+                        <hr />
+
+                        <form asp-action="MarkAsRead"
+                              asp-route-id="@Model.NotificationId"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <button type="submit"
+                                    class="btn btn-success w-100">
+                                Mark as Read
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

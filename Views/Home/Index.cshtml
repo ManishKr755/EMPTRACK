@@ -1,0 +1,159 @@
+@{
+    ViewData["Title"] = "Home";
+}
+
+<section id="home" class="emp-home-hero">
+    <div class="container py-5 py-lg-4">
+        <div class="row align-items-center g-4 g-lg-5">
+            <div class="col-lg-7">
+                <p class="emp-home-kicker mb-2">EMPLOYEE MANAGEMENT SYSTEM</p>
+                <h1 class="display-5 fw-bold mb-3">Welcome to EMPTRACK</h1>
+                <p class="lead text-secondary emp-home-description mb-4">
+                    A simple and efficient system for managing employees, attendance, leave,
+                    tasks, performance, and other employee-related activities.
+                </p>
+                <a asp-controller="Account" asp-action="Login" class="btn btn-primary btn-lg px-4">
+                    Login
+                </a>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="emp-home-summary card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="emp-summary-mark me-3">ET</div>
+                            <div>
+                                <h2 class="h5 mb-1 fw-bold">EMPTRACK</h2>
+                                <p class="small text-secondary mb-0">Employee Management System</p>
+                            </div>
+                        </div>
+                        <p class="small text-secondary mb-3">
+                            A central place to access the employee management activities available in the system.
+                        </p>
+                        <div class="row g-2">
+                            <div class="col-6"><div class="emp-summary-item">Employees</div></div>
+                            <div class="col-6"><div class="emp-summary-item">Attendance</div></div>
+                            <div class="col-6"><div class="emp-summary-item">Leave</div></div>
+                            <div class="col-6"><div class="emp-summary-item">Tasks</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="features" class="py-5">
+    <div class="container py-lg-3">
+        <div class="text-center mb-4 mb-lg-5">
+            <h2 class="fw-bold mb-2">System Features</h2>
+            <p class="text-secondary mb-0">Common employee management activities available in EMPTRACK.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="card emp-feature-card h-100">
+                    <div class="card-body p-4">
+                        <div class="emp-feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <h3 class="h5 fw-bold mt-3">Employee Management</h3>
+                        <p class="text-secondary mb-0">Manage employee information and organizational details.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card emp-feature-card h-100">
+                    <div class="card-body p-4">
+                        <div class="emp-feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                        </div>
+                        <h3 class="h5 fw-bold mt-3">Attendance</h3>
+                        <p class="text-secondary mb-0">Record and manage employee attendance.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card emp-feature-card h-100">
+                    <div class="card-body p-4">
+                        <div class="emp-feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>
+                        </div>
+                        <h3 class="h5 fw-bold mt-3">Leave Management</h3>
+                        <p class="text-secondary mb-0">Submit, review, and approve employee leave requests.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card emp-feature-card h-100">
+                    <div class="card-body p-4">
+                        <div class="emp-feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+                        </div>
+                        <h3 class="h5 fw-bold mt-3">Task Management</h3>
+                        <p class="text-secondary mb-0">Create and manage employee tasks.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card emp-feature-card h-100">
+                    <div class="card-body p-4">
+                        <div class="emp-feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg>
+                        </div>
+                        <h3 class="h5 fw-bold mt-3">Performance Reviews</h3>
+                        <p class="text-secondary mb-0">Record employee performance reviews.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card emp-feature-card h-100">
+                    <div class="card-body p-4">
+                        <div class="emp-feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+                        </div>
+                        <h3 class="h5 fw-bold mt-3">Announcements &amp; Notifications</h3>
+                        <p class="text-secondary mb-0">Keep employees informed about important company information.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="about" class="py-5 bg-light border-top border-bottom">
+    <div class="container py-lg-3">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <p class="emp-home-kicker mb-2">ABOUT EMPTRACK</p>
+                <h2 class="fw-bold mb-3">About EMPTRACK</h2>
+                <p class="text-secondary mb-0">
+                    EMPTRACK is an Employee Management System designed as a student project to simplify
+                    common employee management activities. It brings together features such as employee
+                    information, attendance, leave, tasks, and performance reviews in one application.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container py-lg-2">
+        <div class="emp-login-cta rounded-3 p-4 p-md-5">
+            <div class="row align-items-center g-3">
+                <div class="col-md-8">
+                    <h2 class="h3 fw-bold mb-2">Ready to access EMPTRACK?</h2>
+                    <p class="text-secondary mb-0">Login to continue to your employee dashboard.</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-primary px-4">Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

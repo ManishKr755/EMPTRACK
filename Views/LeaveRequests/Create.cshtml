@@ -1,0 +1,128 @@
+@model EMPTRACK.Models.ViewModels.LeaveRequestCreateViewModel
+
+@{
+    ViewData["Title"] = "New Leave Request";
+    var employee = ViewBag.CurrentEmployee as EMPTRACK.Models.Employee;
+}
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">New Leave Request</h1>
+        <p class="text-muted mb-0">
+            Submit a leave request for yourself.
+        </p>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"></div>
+
+                @if (employee != null)
+                {
+                    <div class="alert alert-light border mb-4">
+                        <strong>Employee:</strong>
+                        @employee.FirstName @employee.LastName
+                        <span class="text-muted">
+                            (@employee.EmployeeCode)
+                        </span>
+                    </div>
+                }
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="LeaveTypeId"
+                               class="form-label">
+                        </label>
+
+                        <select asp-for="LeaveTypeId"
+                                asp-items="ViewBag.LeaveTypes"
+                                class="form-select">
+                            <option value="">
+                                -- Select Leave Type --
+                            </option>
+                        </select>
+
+                        <span asp-validation-for="LeaveTypeId"
+                              class="text-danger"></span>
+
+                        <div class="form-text">
+                            Only active leave types are available.
+                            The current balance is shown beside each type.
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="StartDate"
+                               class="form-label">
+                        </label>
+
+                        <input asp-for="StartDate"
+                               type="date"
+                               class="form-control" />
+
+                        <span asp-validation-for="StartDate"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="EndDate"
+                               class="form-label">
+                        </label>
+
+                        <input asp-for="EndDate"
+                               type="date"
+                               class="form-control" />
+
+                        <span asp-validation-for="EndDate"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="Reason"
+                               class="form-label">
+                        </label>
+
+                        <textarea asp-for="Reason"
+                                  class="form-control"
+                                  rows="5"
+                                  maxlength="500"
+                                  placeholder="Enter the reason for leave..."></textarea>
+
+                        <span asp-validation-for="Reason"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-4 mb-0">
+                    <strong>Important:</strong>
+                    Submitting this request does not deduct your leave balance.
+                    The request will be created with <strong>Pending</strong> status.
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex gap-2">
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Submit Request
+                    </button>
+
+                    <a asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

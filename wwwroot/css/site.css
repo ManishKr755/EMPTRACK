@@ -1,0 +1,315 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+/* EMPTRACK side navigation */
+body {
+  margin-bottom: 0;
+  background: #f8f9fa;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 270px;
+  height: 100vh;
+  background: #fff;
+  border-right: 1px solid #dee2e6;
+  z-index: 1030;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  min-height: 68px;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.sidebar-brand,
+.mobile-brand {
+  color: #212529;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+.sidebar-scroll {
+  overflow-y: auto;
+  flex: 1;
+  padding: .75rem;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+}
+
+.sidebar-section-title {
+  color: #6c757d;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: .9rem .75rem .35rem;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  width: 100%;
+  padding: .62rem .75rem;
+  border-radius: .45rem;
+  color: #343a40;
+  text-decoration: none;
+  font-size: .94rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.sidebar-link:hover {
+  background: #f1f3f5;
+  color: #0d6efd;
+}
+
+.sidebar-icon {
+  width: 1.3rem;
+  min-width: 1.3rem;
+  text-align: center;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.sidebar-link:hover .sidebar-icon {
+  color: #0d6efd;
+}
+
+.sidebar-button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sidebar-logout-form {
+  margin: 0;
+}
+
+.main-content {
+  min-height: 100vh;
+  margin-left: 270px;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-content {
+  flex: 1;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.mobile-topbar {
+  min-height: 58px;
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  padding: .65rem 1rem;
+  align-items: center;
+  gap: .75rem;
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+}
+
+.sidebar-toggle {
+  width: 42px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer {
+  position: static;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px;
+  background: #fff;
+}
+
+@media (max-width: 767.98px) {
+  .sidebar {
+    width: 280px;
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .page-content {
+    padding-top: 1rem;
+  }
+}
+
+/* Public EMPTRACK Home page */
+html {
+  scroll-behavior: smooth;
+}
+
+.emp-public-body {
+  margin-bottom: 0;
+  background: #fff;
+}
+
+.emp-public-nav {
+  min-height: 68px;
+}
+
+.emp-public-brand {
+  text-decoration: none;
+  color: #212529;
+  line-height: 1.1;
+}
+
+.emp-public-brand:hover {
+  color: #0d6efd;
+}
+
+.emp-public-brand-name {
+  display: block;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.emp-public-brand-subtitle {
+  display: block;
+  color: #6c757d;
+  font-size: .68rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-top: .12rem;
+}
+
+.emp-home-hero {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.emp-home-description {
+  max-width: 680px;
+  line-height: 1.7;
+}
+
+.emp-home-kicker {
+  color: #0d6efd;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.emp-home-summary {
+  border: 1px solid #e1e5e9 !important;
+  border-radius: .75rem;
+}
+
+.emp-summary-mark {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: .5rem;
+  background: #e7f1ff;
+  color: #0d6efd;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.emp-summary-item {
+  padding: .65rem .75rem;
+  border: 1px solid #e9ecef;
+  border-radius: .5rem;
+  color: #495057;
+  font-size: .9rem;
+  background: #fff;
+}
+
+.emp-feature-card {
+  border: 1px solid #e2e6ea;
+  border-radius: .65rem;
+  box-shadow: 0 .15rem .6rem rgba(0, 0, 0, .04);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.emp-feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 .35rem 1rem rgba(0, 0, 0, .07);
+}
+
+.emp-feature-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: .5rem;
+  background: #e7f1ff;
+  color: #0d6efd;
+}
+
+.emp-feature-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.emp-login-cta {
+  background: #f8f9fa;
+  border: 1px solid #e2e6ea;
+}
+
+.emp-public-footer {
+  min-height: 54px;
+}
+
+@media (max-width: 575.98px) {
+  .emp-home-hero .display-5 {
+    font-size: 2.25rem;
+  }
+}
+

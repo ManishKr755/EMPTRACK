@@ -1,0 +1,286 @@
+﻿@model IEnumerable<EMPTRACK.Models.Task>
+
+@{
+    ViewData["Title"] = "Tasks";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Tasks</h1>
+            <p class="text-muted mb-0">
+                Manage employee tasks and assignments.
+            </p>
+        </div>
+
+        <a asp-action="Create"
+           class="btn btn-primary">
+            + New Task
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["SuccessMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["ErrorMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form asp-action="Index"
+                  method="get">
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Search
+                        </label>
+
+                        <input name="search"
+                               value="@ViewData["Search"]"
+                               class="form-control"
+                               placeholder="Search title or description..." />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Assigned Employee
+                        </label>
+
+                        <select name="assignedEmployeeId"
+                                asp-items="ViewBag.Employees"
+                                class="form-select">
+
+                            <option value="">
+                                All Employees
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Status
+                        </label>
+
+                        <select name="status"
+                                class="form-select">
+
+                            <option value="">
+                                All Statuses
+                            </option>
+
+                            @foreach (var item in new[]
+                            {
+                                "Pending",
+                                "In Progress",
+                                "Completed",
+                                "Cancelled"
+                            })
+                            {
+                                if (ViewData["Status"]?.ToString() == item)
+                                {
+                                    <option value="@item"
+                                            selected>
+                                        @item
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@item">
+                                        @item
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Priority
+                        </label>
+
+                        <select name="priority"
+                                class="form-select">
+
+                            <option value="">
+                                All Priorities
+                            </option>
+
+                            @foreach (var item in new[]
+                            {
+                                "Low",
+                                "Medium",
+                                "High",
+                            })
+                            {
+                                if (ViewData["Priority"]?.ToString() == item)
+                                {
+                                    <option value="@item"
+                                            selected>
+                                        @item
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@item">
+                                        @item
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="submit"
+                                class="btn btn-outline-primary">
+                            Filter
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary">
+                            Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <strong>Task List</strong>
+        </div>
+
+        <div class="card-body p-0">
+            @if (!Model.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    No tasks found.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Task</th>
+                                <th>Assigned To</th>
+                                <th>Due Date</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th class="text-end">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var task in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            @task.Title
+                                        </strong>
+
+                                        <div class="small text-muted">
+                                            @(task.Description.Length > 80
+                                                ? task.Description.Substring(0, 80) + "..."
+                                                : task.Description)
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        @task.AssignedEmployee.FirstName
+                                        @task.AssignedEmployee.LastName
+
+                                        <div class="small text-muted">
+                                            @task.AssignedEmployee.EmployeeCode
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        @task.DueDate.ToString("dd MMM yyyy")
+                                    </td>
+
+                                    <td>
+                                        @if (task.Priority == "High")
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                High
+                                            </span>
+                                        }
+                                        else if (task.Priority == "Low")
+                                        {
+                                            <span class="badge bg-secondary">
+                                                Low
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info text-dark">
+                                                Medium
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (task.Status == "Completed")
+                                        {
+                                            <span class="badge bg-success">
+                                                Completed
+                                            </span>
+                                        }
+                                        else if (task.Status == "Cancelled")
+                                        {
+                                            <span class="badge bg-danger">
+                                                Cancelled
+                                            </span>
+                                        }
+                                        else if (task.Status == "In Progress")
+                                        {
+                                            <span class="badge bg-primary">
+                                                In Progress
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                Pending
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td class="text-end">
+                                        <a asp-action="Details"
+                                           asp-route-id="@task.TaskId"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            Details
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

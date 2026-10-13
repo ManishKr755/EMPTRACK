@@ -1,0 +1,50 @@
+@model IEnumerable<EMPTRACK.Models.LeaveBalance>
+
+@{
+    ViewData["Title"] = "My Leave Balances";
+}
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">My Leave Balances</h1>
+        <p class="text-muted mb-0">View how many leaves you currently have available.</p>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            @if (!Model.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    No leave balances have been initialized for your account.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Leave Type</th>
+                                <th>Allocation</th>
+                                <th>Available Leaves</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var balance in Model)
+                        {
+                            <tr>
+                                <td><strong>@balance.LeaveType.Name</strong></td>
+                                <td>
+                                    @balance.LeaveType.AllocationType
+                                    (@balance.LeaveType.AllocationLimit.ToString("0.##"))
+                                </td>
+                                <td><strong>@balance.AvailableLeaves.ToString("0.##")</strong></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

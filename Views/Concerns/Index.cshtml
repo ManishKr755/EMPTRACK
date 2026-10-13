@@ -1,0 +1,243 @@
+@model IEnumerable<EMPTRACK.Models.Concern>
+
+@{
+    ViewData["Title"] = "Concerns";
+    var canManage = User.IsInRole("Admin")
+        || User.IsInRole("HR")
+        || User.IsInRole("HR Head");
+}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                @(canManage ? "Employee Concerns" : "My Concerns")
+            </h1>
+
+            <p class="text-muted mb-0">
+                @(canManage
+                    ? "View employee concerns and manage their status."
+                    : "View concerns you have submitted.")
+            </p>
+        </div>
+
+        <a asp-action="Create"
+           class="btn btn-primary">
+            + New Concern
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["SuccessMessage"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["ErrorMessage"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <form asp-action="Index" method="get">
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Search</label>
+
+                        <input name="search"
+                               value="@ViewData["Search"]"
+                               class="form-control"
+                               placeholder="@(canManage ? "Subject, employee name or code..." : "Subject...")" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+
+                        <select name="status"
+                                class="form-select">
+
+                            <option value="">All Statuses</option>
+
+                            @foreach (var status in new[]
+                            {
+                                "Open",
+                                "In Progress",
+                                "Resolved",
+                                "Closed"
+                            })
+                            {
+                                if (ViewData["Status"]?.ToString() == status)
+                                {
+                                    <option value="@status" selected>
+                                        @status
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@status">
+                                        @status
+                                    </option>
+                                }
+                            }
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+
+                        <button type="submit"
+                                class="btn btn-outline-primary">
+                            Search
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary">
+                            Clear
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+            <strong>Concern List</strong>
+        </div>
+
+        <div class="card-body p-0">
+
+            @if (!Model.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    No concerns found.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+
+                    <table class="table table-hover align-middle mb-0">
+
+                        <thead class="table-light">
+                            <tr>
+                                @if (canManage)
+                                {
+                                    <th>Employee</th>
+                                }
+
+                                <th>Subject</th>
+                                <th>Created</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            @foreach (var concern in Model)
+                            {
+                                <tr>
+
+                                    @if (canManage)
+                                    {
+                                        <td>
+                                            <strong>
+                                                @concern.Employee.EmployeeCode
+                                            </strong>
+
+                                            <div class="small text-muted">
+                                                @concern.Employee.FirstName
+                                                @concern.Employee.LastName
+                                            </div>
+                                        </td>
+                                    }
+
+                                    <td>
+                                        <strong>@concern.Subject</strong>
+                                    </td>
+
+                                    <td>
+                                        @concern.CreatedAt.ToString(
+                                            "dd MMM yyyy hh:mm tt")
+                                    </td>
+
+                                    <td>
+                                        @if (concern.Status == "Open")
+                                        {
+                                            <span class="badge bg-danger">
+                                                Open
+                                            </span>
+                                        }
+                                        else if (concern.Status == "In Progress")
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                In Progress
+                                            </span>
+                                        }
+                                        else if (concern.Status == "Resolved")
+                                        {
+                                            <span class="badge bg-success">
+                                                Resolved
+                                            </span>
+                                        }
+                                        else if (concern.Status == "Closed")
+                                        {
+                                            <span class="badge bg-secondary">
+                                                Closed
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                @concern.Status
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td class="text-end">
+
+                                        <a asp-action="Details"
+                                           asp-route-id="@concern.ConcernId"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            Details
+                                        </a>
+
+                                    </td>
+
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+            }
+
+        </div>
+    </div>
+
+</div>

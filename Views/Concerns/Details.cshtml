@@ -1,0 +1,258 @@
+﻿@model EMPTRACK.Models.ViewModels.ConcernDetailsViewModel
+
+@{
+    ViewData["Title"] = "Concern Details";
+    var canManage = User.IsInRole("Admin")
+        || User.IsInRole("HR")
+        || User.IsInRole("HR Head");
+}
+
+<div class="container-fluid">
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["SuccessMessage"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["ErrorMessage"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Concern Details</h1>
+            <p class="text-muted mb-0">
+                Concern #@Model.ConcernId
+            </p>
+        </div>
+
+        <a asp-action="Index"
+           class="btn btn-outline-secondary">
+            Back to Concerns
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <strong>Concern Information</strong>
+        </div>
+
+        <div class="card-body">
+            <dl class="row mb-0">
+
+                <dt class="col-sm-3">Employee</dt>
+                <dd class="col-sm-9">
+                    @Model.EmployeeCode - @Model.EmployeeName
+                </dd>
+
+                <dt class="col-sm-3">Subject</dt>
+                <dd class="col-sm-9">
+                    @Model.Subject
+                </dd>
+
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9">
+                    @if (Model.Status == "Open")
+                    {
+                        <span class="badge bg-danger">Open</span>
+                    }
+                    else if (Model.Status == "In Progress")
+                    {
+                        <span class="badge bg-warning text-dark">In Progress</span>
+                    }
+                    else if (Model.Status == "Resolved")
+                    {
+                        <span class="badge bg-success">Resolved</span>
+                    }
+                    else if (Model.Status == "Closed")
+                    {
+                        <span class="badge bg-secondary">Closed</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">@Model.Status</span>
+                    }
+                </dd>
+
+                <dt class="col-sm-3">Created</dt>
+                <dd class="col-sm-9">
+                    @Model.CreatedAt.ToString("dd MMMM yyyy hh:mm tt")
+                </dd>
+
+            </dl>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <strong>Conversation</strong>
+        </div>
+
+        <div class="card-body">
+            @if (Model.Messages.Count == 0)
+            {
+                <p class="text-muted mb-0">
+                    No messages have been added yet.
+                </p>
+            }
+            else
+            {
+                @foreach (var message in Model.Messages)
+                {
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>@message.SenderName</strong>
+                            <small class="text-muted">
+                                @message.CreatedAt.ToString("dd MMM yyyy hh:mm tt")
+                            </small>
+                        </div>
+
+                        <div class="mb-0">
+                            @message.Message
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    @if (Model.CanSendMessage)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Add Message</strong>
+            </div>
+
+            <div class="card-body">
+                <form asp-controller="ConcernMessages"
+                      asp-action="AddMessage"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="ConcernId"
+                           value="@Model.ConcernId" />
+
+                    <div class="mb-3">
+                        <label for="Message"
+                               class="form-label">
+                            Message
+                        </label>
+
+                        <textarea id="Message"
+                                  name="Message"
+                                  class="form-control"
+                                  rows="4"
+                                  maxlength="2000"
+                                  required></textarea>
+
+                        <div class="form-text">
+                            Enter a response or update for this concern.
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+
+    @if (canManage && Model.Status != "Closed")
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Update Status</strong>
+            </div>
+
+            <div class="card-body">
+                <p class="text-muted">
+                    Current status: <strong>@Model.Status</strong>
+                </p>
+
+                <form asp-action="ChangeStatus"
+                      method="post"
+                      class="d-flex gap-2 align-items-center">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="id"
+                           value="@Model.ConcernId" />
+
+                    @if (Model.Status == "Open")
+                    {
+                        <input type="hidden"
+                               name="status"
+                               value="In Progress" />
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Move to In Progress
+                        </button>
+                    }
+                    else if (Model.Status == "In Progress")
+                    {
+                        <input type="hidden"
+                               name="status"
+                               value="Resolved" />
+
+                        <button type="submit"
+                                class="btn btn-success">
+                            Mark Resolved
+                        </button>
+                    }
+                    else if (Model.Status == "Resolved")
+                    {
+                        <input type="hidden"
+                               name="status"
+                               value="Closed" />
+
+                        <button type="submit"
+                                class="btn btn-secondary">
+                            Close Concern
+                        </button>
+                    }
+                </form>
+            </div>
+        </div>
+    }
+
+    @if (canManage)
+    {
+        <div class="card shadow-sm border-danger">
+            <div class="card-header text-danger">
+                <strong>Delete Concern</strong>
+            </div>
+
+            <div class="card-body">
+                <p class="text-muted">
+                    Delete the concern only when genuinely necessary.
+                </p>
+
+                <a asp-action="Delete"
+                   asp-route-id="@Model.ConcernId"
+                   class="btn btn-outline-danger">
+                    Delete Concern
+                </a>
+            </div>
+        </div>
+    }
+
+</div>

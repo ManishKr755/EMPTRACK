@@ -1,0 +1,57 @@
+@model EMPTRACK.Models.ViewModels.LeaveBalanceCreateViewModel
+
+@{
+    ViewData["Title"] = "Initialize Leave Balance";
+}
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Initialize Leave Balance</h1>
+        <p class="text-muted mb-0">
+            Select an employee and leave type. The configured leave-type limit will be used as the starting balance.
+        </p>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="EmployeeId" class="form-label"></label>
+                        <select asp-for="EmployeeId" asp-items="ViewBag.Employees" class="form-select">
+                            <option value="">-- Select Employee --</option>
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="LeaveTypeId" class="form-label"></label>
+                        <select asp-for="LeaveTypeId" asp-items="ViewBag.LeaveTypes" class="form-select">
+                            <option value="">-- Select Leave Type --</option>
+                        </select>
+                        <span asp-validation-for="LeaveTypeId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-4">
+                    The employee's starting available balance is taken from the Leave Type configuration.
+                    For example, <strong>Annually + 12</strong> starts at 12, while <strong>Monthly + 1</strong> starts at 1.
+                </div>
+
+                <hr class="my-4" />
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Initialize Balance</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

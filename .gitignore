@@ -1,0 +1,157 @@
+﻿# ==========================================
+
+# EMPTRACK - ASP.NET Core MVC / .NET 10
+
+# ==========================================
+
+# ---- Build output ----
+
+**/bin/
+**/obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+out/
+artifacts/
+
+# ---- Visual Studio ----
+
+.vs/
+**/.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.sln.iml
+*.csproj.user
+*.vbproj.user
+*.vcxproj.user
+*.rsuser
+*.slnx.docstates
+
+# ---- Rider / JetBrains ----
+
+.idea/
+*.sln.iml
+*.DotSettings.user
+
+# ---- VS Code local settings ----
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# ---- .NET generated files ----
+
+project.lock.json
+project.fragment.lock.json
+*.nuget.g.props
+*.nuget.g.targets
+.nuget/
+**/Generated/
+**/TestResults/
+*.coverage
+*.coveragexml
+
+# ---- ASP.NET Core local secrets ----
+
+secrets.json
+appsettings.Local.json
+appsettings.*.local.json
+appsettings.Development.json
+appsettings.Production.json
+
+# ---- Environment variables and credentials ----
+
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.pfx
+*.p12
+*.key
+credentials.json
+client_secret.json
+
+# ---- ASP.NET Core Data Protection keys ----
+
+DataProtection-Keys/*
+!DataProtection-Keys/.gitkeep
+**/DataProtection-Keys/*
+!**/DataProtection-Keys/.gitkeep
+
+# ---- Databases and database backups ----
+
+*.mdf
+*.ldf
+*.ndf
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+*.bak
+*.bacpac
+*.dump
+*.dmp
+
+# ---- Logs and temporary files ----
+
+*.log
+logs/
+Log/
+Logs/
+tmp/
+temp/
+*.tmp
+*.temp
+*.old
+*.orig
+*.swp
+*.swo
+*~
+
+# ---- Operating system files ----
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---- Publish and deployment output ----
+
+publish/
+wwwroot/dist/
+wwwroot/build/
+
+# ---- Package manager / tool caches ----
+
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+.cache/
+.parcel-cache/
+
+# ---- Local certificates and test artifacts ----
+
+*.cer
+*.crt
+*.coverage
+coverage/
+TestResults/
+
+# ---- Optional personal notes / backups ----
+
+*.bak~
+*.backup
+*.patch
+*.rej
