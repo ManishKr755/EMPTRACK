@@ -1,157 +1,80 @@
-﻿# ==========================================
+﻿# ==================================================
 
-# EMPTRACK - ASP.NET Core MVC / .NET 10
+# EMPTRACK - ASP.NET Core MVC
 
-# ==========================================
+# ==================================================
 
-# ---- Build output ----
+# ---------- Build output ----------
 
-**/bin/
-**/obj/
-[Bb]uild/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-[Aa]rm/
-[Aa]rm64/
-out/
+[Bb]in/
+[Oo]bj/
 artifacts/
+publish/
 
-# ---- Visual Studio ----
+# ---------- Visual Studio local files ----------
 
 .vs/
-**/.vs/
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
-*.sln.iml
-*.csproj.user
-*.vbproj.user
-*.vcxproj.user
 *.rsuser
-*.slnx.docstates
-
-# ---- Rider / JetBrains ----
-
-.idea/
-*.sln.iml
 *.DotSettings.user
 
-# ---- VS Code local settings ----
+# ---------- Other IDE files ----------
 
-.vscode/*
-!.vscode/extensions.json
-!.vscode/launch.json
-!.vscode/tasks.json
+.vscode/
+.idea/
 
-# ---- .NET generated files ----
-
-project.lock.json
-project.fragment.lock.json
-*.nuget.g.props
-*.nuget.g.targets
-.nuget/
-**/Generated/
-**/TestResults/
-*.coverage
-*.coveragexml
-
-# ---- ASP.NET Core local secrets ----
-
-secrets.json
-appsettings.Local.json
-appsettings.*.local.json
-appsettings.Development.json
-appsettings.Production.json
-
-# ---- Environment variables and credentials ----
+# ---------- Secrets and local configuration ----------
 
 .env
 .env.*
 !.env.example
-!.env.sample
-*.pem
-*.pfx
-*.p12
-*.key
-credentials.json
-client_secret.json
+secrets.json
+DataProtection-Keys/*.xml
 
-# ---- ASP.NET Core Data Protection keys ----
-
-DataProtection-Keys/*
-!DataProtection-Keys/.gitkeep
-**/DataProtection-Keys/*
-!**/DataProtection-Keys/.gitkeep
-
-# ---- Databases and database backups ----
-
-*.mdf
-*.ldf
-*.ndf
-*.db
-*.sqlite
-*.sqlite3
-*.db-shm
-*.db-wal
-*.bak
-*.bacpac
-*.dump
-*.dmp
-
-# ---- Logs and temporary files ----
+# ---------- Logs and temporary files ----------
 
 *.log
-logs/
-Log/
-Logs/
-tmp/
-temp/
 *.tmp
 *.temp
-*.old
-*.orig
-*.swp
-*.swo
-*~
 
-# ---- Operating system files ----
+# ---------- Test results and coverage ----------
+
+TestResults/
+coverage/
+.coverage
+*.coverage
+*.coveragexml
+
+# ---------- Generated NuGet packages ----------
+
+*.nupkg
+*.snupkg
+
+# ---------- Operating system files ----------
 
 .DS_Store
-.AppleDouble
-.LSOverride
 Thumbs.db
-Desktop.ini
-$RECYCLE.BIN/
+desktop.ini
 
-# ---- Publish and deployment output ----
+# ==================================================
 
-publish/
-wwwroot/dist/
-wwwroot/build/
+# TEMPORARY RULES - REMOVE IN SEQUENCE
 
-# ---- Package manager / tool caches ----
+# ==================================================
 
-node_modules/
-.npm/
-.yarn/
-.pnpm-store/
-.cache/
-.parcel-cache/
+# ---------- Person 2: Models and Services ----------
 
-# ---- Local certificates and test artifacts ----
+# Person 2 removes these two rules before their commit.
 
-*.cer
-*.crt
-*.coverage
-coverage/
-TestResults/
+/Models/
+/Services/
 
-# ---- Optional personal notes / backups ----
+# ---------- Person 3: Views and Frontend Assets ----------
 
-*.bak~
-*.backup
-*.patch
-*.rej
+# Person 3 removes these two rules before their commit.
+
+/Views/
+/wwwroot/
