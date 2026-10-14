@@ -58,17 +58,3 @@ coverage/
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# ==================================================
-
-# TEMPORARY RULES - REMOVE IN SEQUENCE
-
-# ==================================================
-
-
-# ---------- Person 3: Views and Frontend Assets ----------
-
-# Person 3 removes these two rules before their commit.
-
-/Views/
-/wwwroot/
