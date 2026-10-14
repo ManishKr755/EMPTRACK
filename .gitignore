@@ -59,18 +59,6 @@ coverage/
 Thumbs.db
 desktop.ini
 
-# ==================================================
-
-# TEMPORARY RULES - REMOVE IN SEQUENCE
-
-# ==================================================
-
-# ---------- Person 2: Models and Services ----------
-
-# Person 2 removes these two rules before their commit.
-
-/Models/
-/Services/
 
 # ---------- Person 3: Views and Frontend Assets ----------
 
