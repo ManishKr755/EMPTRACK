@@ -1,0 +1,100 @@
+﻿@model EMPTRACK.Models.LeaveBalance
+
+@{
+    ViewData["Title"] = "Leave Balance Details";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Leave Balance Details</h1>
+
+            <p class="text-muted mb-0">
+                @Model.Employee.FirstName
+                @Model.Employee.LastName
+                -
+                @Model.LeaveType.Name
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a asp-action="Edit"
+               asp-route-id="@Model.LeaveBalanceId"
+               class="btn btn-primary">
+                Edit
+            </a>
+
+            <a asp-action="Index"
+               class="btn btn-outline-secondary">
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <strong>Balance Information</strong>
+                </div>
+
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">
+                            Balance ID
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.LeaveBalanceId
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Employee
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.Employee.FirstName
+                            @Model.Employee.LastName
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Employee Code
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.Employee.EmployeeCode
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Leave Type
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.LeaveType.Name
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Allocation
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.LeaveType.AllocationType -
+                            @Model.LeaveType.AllocationLimit.ToString("0.##")
+                            @(Model.LeaveType.AllocationType == "Monthly" ? "per month" : "per year")
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Available Leaves
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            <strong>
+                                @Model.AvailableLeaves.ToString("0.##")
+                            </strong>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

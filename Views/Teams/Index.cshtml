@@ -1,0 +1,187 @@
+@model IEnumerable<EMPTRACK.Models.Team>
+
+@{
+    ViewData["Title"] = "Teams";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Teams</h1>
+            <p class="text-muted mb-0">
+                Manage teams, departments, managers, and team members.
+            </p>
+        </div>
+
+        <a asp-action="Create"
+           class="btn btn-primary">
+            + Add Team
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+            @TempData["SuccessMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form asp-action="Index"
+                  method="get">
+
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label for="search"
+                               class="form-label">
+                            Search
+                        </label>
+
+                        <input type="text"
+                               id="search"
+                               name="search"
+                               value="@ViewData["Search"]"
+                               class="form-control"
+                               placeholder="Search team, department, or manager..." />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="departmentId"
+                               class="form-label">
+                            Department
+                        </label>
+
+                        <select id="departmentId"
+                                name="departmentId"
+                                asp-items="ViewBag.DepartmentFilter"
+                                class="form-select">
+
+                            <option value="">
+                                All Departments
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 d-flex align-items-end gap-2">
+                        <button type="submit"
+                                class="btn btn-outline-primary">
+                            Search
+                        </button>
+
+                        <a asp-action="Index"
+                           class="btn btn-outline-secondary">
+                            Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            @if (!Model.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    No teams found.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Team</th>
+                                <th>Department</th>
+                                <th>Manager</th>
+                                <th>Employees</th>
+                                <th class="text-end">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var team in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            @team.Name
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        @if (team.Department != null)
+                                        {
+                                            <span>
+                                                @team.Department.Code -
+                                                @team.Department.Name
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                Not available
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (team.ManagerEmployee != null)
+                                        {
+                                            <div>
+                                                @team.ManagerEmployee.FirstName
+                                                @team.ManagerEmployee.LastName
+                                            </div>
+
+                                            <small class="text-muted">
+                                                @team.ManagerEmployee.EmployeeCode
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                Not available
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @team.Employees.Count
+                                    </td>
+
+                                    <td class="text-end">
+                                        <div class="btn-group"
+                                             role="group">
+
+                                            <a asp-action="Details"
+                                               asp-route-id="@team.TeamId"
+                                               class="btn btn-sm btn-outline-secondary">
+                                                Details
+                                            </a>
+
+                                            <a asp-action="Edit"
+                                               asp-route-id="@team.TeamId"
+                                               class="btn btn-sm btn-outline-primary">
+                                                Edit
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

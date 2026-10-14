@@ -1,0 +1,104 @@
+﻿@model EMPTRACK.Models.ViewModels.TeamCreateViewModel
+
+@{
+    ViewData["Title"] = "Create Team";
+}
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Create Team</h1>
+        <p class="text-muted mb-0">
+            Add a new team and assign its manager.
+        </p>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="Create"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="DepartmentId"
+                               class="form-label">
+                        </label>
+
+                        <select asp-for="DepartmentId"
+                                asp-items="ViewBag.Departments"
+                                class="form-select">
+
+                            <option value="">
+                                -- Select Department --
+                            </option>
+                        </select>
+
+                        <span asp-validation-for="DepartmentId"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Name"
+                               class="form-label">
+                        </label>
+
+                        <input asp-for="Name"
+                               class="form-control"
+                               autocomplete="off"
+                               placeholder="Example: Development Team" />
+
+                        <span asp-validation-for="Name"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="ManagerEmployeeId"
+                               class="form-label">
+                        </label>
+
+                        <select asp-for="ManagerEmployeeId"
+                                asp-items="ViewBag.Managers"
+                                class="form-select">
+
+                            <option value="">
+                                -- Select Manager --
+                            </option>
+                        </select>
+
+                        <div class="form-text">
+                            The manager must be an active Manager
+                            belonging to the selected department.
+                        </div>
+
+                        <span asp-validation-for="ManagerEmployeeId"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex gap-2">
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Create Team
+                    </button>
+
+                    <a asp-action="Index"
+                       class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

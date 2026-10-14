@@ -1,0 +1,143 @@
+﻿@model EMPTRACK.Models.UserAccount
+
+@{
+    ViewData["Title"] = "User Account Details";
+}
+
+<div class="container-fluid">
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["SuccessMessage"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1 class="h3 mb-1">
+                User Account Details
+            </h1>
+
+            <p class="text-muted mb-0">
+                @Model.Username
+            </p>
+        </div>
+
+        <div>
+
+            <a asp-action="ResetPassword"
+               asp-route-id="@Model.UserAccountId"
+               class="btn btn-outline-warning">
+                Reset Password
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.UserAccountId"
+               class="btn btn-primary">
+                Edit
+            </a>
+
+            <a asp-action="Index"
+               class="btn btn-outline-secondary">
+                Back
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+            <strong>Account Information</strong>
+        </div>
+
+        <div class="card-body">
+
+            <dl class="row mb-0">
+
+                <dt class="col-sm-3">
+                    Username
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.Username
+                </dd>
+
+                <dt class="col-sm-3">
+                    Employee
+                </dt>
+
+                <dd class="col-sm-9">
+
+                    @if (Model.Employee != null)
+                    {
+                        <span>
+                            @Model.Employee.FirstName
+                            @Model.Employee.LastName
+                        </span>
+
+                        <div class="small text-muted">
+                            @Model.Employee.EmployeeCode
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="text-muted">
+                            Not linked to an employee
+                        </span>
+                    }
+
+                </dd>
+
+                <dt class="col-sm-3">
+                    Status
+                </dt>
+
+                <dd class="col-sm-9">
+
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge bg-success">
+                            Active
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">
+                            Inactive
+                        </span>
+                    }
+
+                </dd>
+
+                <dt class="col-sm-3">
+                    Approved Leave Requests
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.ApprovedLeaveRequests.Count
+                </dd>
+
+                <dt class="col-sm-3">
+                    Audit Logs
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.AuditLogs.Count
+                </dd>
+
+            </dl>
+
+        </div>
+
+    </div>
+
+</div>

@@ -1,0 +1,69 @@
+﻿@model EMPTRACK.Models.Attendance
+
+@{
+    ViewData["Title"] = "Attendance Details";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Attendance Details</h1>
+            <p class="text-muted mb-0">
+                @Model.Employee.FirstName @Model.Employee.LastName - @Model.Date.ToString("dd MMM yyyy")
+            </p>
+        </div>
+
+        <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <strong>Attendance Information</strong>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Employee</dt>
+                        <dd class="col-sm-7">
+                            @Model.Employee.FirstName @Model.Employee.LastName
+                        </dd>
+
+                        <dt class="col-sm-5">Employee Code</dt>
+                        <dd class="col-sm-7">@Model.Employee.EmployeeCode</dd>
+
+                        <dt class="col-sm-5">Date</dt>
+                        <dd class="col-sm-7">@Model.Date.ToString("dd MMMM yyyy")</dd>
+
+                        <dt class="col-sm-5">Check In</dt>
+                        <dd class="col-sm-7">@Model.CheckInTime.ToString("hh:mm tt")</dd>
+
+                        <dt class="col-sm-5">Check Out</dt>
+                        <dd class="col-sm-7">
+                            @if (Model.CheckOutTime.HasValue)
+                            {
+                                @Model.CheckOutTime.Value.ToString("hh:mm tt")
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not checked out</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">Status</dt>
+                        <dd class="col-sm-7">
+                            @if (Model.CheckOutTime.HasValue)
+                            {
+                                <span class="badge text-bg-success">Completed</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-warning">Checked In</span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

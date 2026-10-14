@@ -1,0 +1,168 @@
+﻿@model EMPTRACK.Models.LeaveType
+
+@{
+    ViewData["Title"] = "Leave Type Details";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Leave Type Details</h1>
+
+            <p class="text-muted mb-0">
+                @Model.Name
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Edit"
+                   asp-route-id="@Model.LeaveTypeId"
+                   class="btn btn-primary">
+                    Edit
+                </a>
+            }
+
+            <a asp-action="Index"
+               class="btn btn-outline-secondary">
+                Back
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <strong>Leave Type Information</strong>
+                </div>
+
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">
+                            Leave Type ID
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.LeaveTypeId
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Name
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.Name
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Allocation Type
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.AllocationType
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Allocation Limit
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.AllocationLimit.ToString("0.##")
+                            @if (Model.AllocationType == "Monthly")
+                            {
+                                <span class="text-muted">per month</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">per year</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Status
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @if (Model.IsActive)
+                            {
+                                <span class="badge text-bg-success">
+                                    Active
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">
+                                    Inactive
+                                </span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Leave Balances
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.LeaveBalances.Count
+                        </dd>
+
+                        <dt class="col-sm-5">
+                            Leave Requests
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @Model.LeaveRequests.Count
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <strong>Employees with Balances</strong>
+                </div>
+
+                <div class="card-body p-0">
+                    @if (!Model.LeaveBalances.Any())
+                    {
+                        <div class="p-4 text-center text-muted">
+                            No leave balances have been created.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Code</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var balance in Model.LeaveBalances)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @balance.Employee.FirstName
+                                                @balance.Employee.LastName
+                                            </td>
+
+                                            <td>
+                                                @balance.Employee.EmployeeCode
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

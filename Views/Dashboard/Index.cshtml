@@ -1,0 +1,304 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+
+    var username = ViewBag.Username as string ?? "User";
+    var employeeId = ViewBag.EmployeeId as string;
+    var isManagementView = ViewBag.IsManagementView is bool managementFlag && managementFlag;
+}
+
+<div class="container-fluid">
+
+    <!-- Header -->
+    <div class="mb-4">
+        <h1 class="display-6 fw-bold">
+            Welcome, @username
+        </h1>
+
+        @if (!string.IsNullOrEmpty(employeeId))
+        {
+            <p class="text-muted mb-0">
+                Employee ID: @employeeId
+            </p>
+        }
+        else
+        {
+            <p class="text-muted mb-0">
+                You are logged in as an administrator.
+            </p>
+        }
+    </div>
+
+    @if (isManagementView)
+    {
+        var totalEmployees = (int)(ViewBag.TotalEmployees ?? 0);
+        var activeEmployees = (int)(ViewBag.ActiveEmployees ?? 0);
+        var totalDepartments = (int)(ViewBag.TotalDepartments ?? 0);
+        var totalTeams = (int)(ViewBag.TotalTeams ?? 0);
+        var todayAttendance = (int)(ViewBag.TodayAttendance ?? 0);
+        var pendingLeaveRequests = (int)(ViewBag.PendingLeaveRequests ?? 0);
+
+        var recentEmployees =
+            ViewBag.RecentEmployees
+            as IEnumerable<EMPTRACK.Models.Employee>
+            ?? Enumerable.Empty<EMPTRACK.Models.Employee>();
+
+        <!-- Organization-wide statistics (Admin / HR Head / HR / Head Manager / Manager only) -->
+        <div class="row g-4 mb-4">
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            Total Employees
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @totalEmployees
+                        </h2>
+
+                        <a asp-controller="Employees"
+                           asp-action="Index"
+                           class="btn btn-sm btn-outline-primary mt-3">
+                            View Employees
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            Active Employees
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @activeEmployees
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            Departments
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @totalDepartments
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            Teams
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @totalTeams
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            Today's Attendance
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @todayAttendance
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            Pending Leave Requests
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @pendingLeaveRequests
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Recent Employees -->
+        <div class="card shadow-sm">
+
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Recent Employees</strong>
+
+                <a asp-controller="Employees"
+                   asp-action="Index"
+                   class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+
+            <div class="card-body p-0">
+
+                @if (recentEmployees.Any())
+                {
+                    <div class="table-responsive">
+
+                        <table class="table table-hover mb-0">
+
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                @foreach (var employee in recentEmployees)
+                                {
+                                    <tr>
+
+                                        <td>
+                                            @employee.EmployeeCode
+                                        </td>
+
+                                        <td>
+                                            @employee.FirstName
+                                            @employee.LastName
+                                        </td>
+
+                                        <td>
+                                            @employee.Email
+                                        </td>
+
+                                        <td>
+                                            @employee.Role
+                                        </td>
+
+                                        <td>
+                                            @(employee.Department?.Name ?? "-")
+                                        </td>
+
+                                        <td>
+                                            @employee.EmploymentStatus
+                                        </td>
+
+                                        <td>
+                                            <a asp-controller="Employees"
+                                               asp-action="Details"
+                                               asp-route-id="@employee.EmployeeId"
+                                               class="btn btn-sm btn-outline-secondary">
+                                                Details
+                                            </a>
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+                }
+                else
+                {
+                    <div class="p-4 text-center text-muted">
+                        No employees found.
+                    </div>
+                }
+
+            </div>
+        </div>
+    }
+    else
+    {
+        var checkedInToday = ViewBag.CheckedInToday is bool checkedIn && checkedIn;
+        var myPendingLeaveRequests = (int)(ViewBag.MyPendingLeaveRequests ?? 0);
+        var myUnreadNotifications = (int)(ViewBag.MyUnreadNotifications ?? 0);
+
+        <!-- Personal summary (standard Employee view) -->
+        <div class="row g-4 mb-4">
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            Today's Attendance
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @(checkedInToday ? "Checked In" : "Not Checked In")
+                        </h2>
+
+                        <a asp-controller="Attendance"
+                           asp-action="Index"
+                           class="btn btn-sm btn-outline-primary mt-3">
+                            View Attendance
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            My Pending Leave Requests
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @myPendingLeaveRequests
+                        </h2>
+
+                        <a asp-controller="LeaveRequests"
+                           asp-action="Index"
+                           class="btn btn-sm btn-outline-primary mt-3">
+                            View Leave Requests
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <p class="text-muted mb-1">
+                            Unread Notifications
+                        </p>
+
+                        <h2 class="fw-bold mb-0">
+                            @myUnreadNotifications
+                        </h2>
+
+                        <a asp-controller="Notifications"
+                           asp-action="Index"
+                           class="btn btn-sm btn-outline-primary mt-3">
+                            View Notifications
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    }
+
+</div>
