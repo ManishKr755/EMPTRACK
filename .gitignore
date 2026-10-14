@@ -65,12 +65,6 @@ desktop.ini
 
 # ==================================================
 
-# ---------- Person 2: Models and Services ----------
-
-# Person 2 removes these two rules before their commit.
-
-/Models/
-/Services/
 
 # ---------- Person 3: Views and Frontend Assets ----------
 
