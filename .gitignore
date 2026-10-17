@@ -81,6 +81,11 @@ Desktop.ini
 *.swo
 *~
 
+# ASP.NET Core Data Protection keys
+key-*.xml
+DataProtection-Keys/
+dp_keys/
+
 # Publish profiles may contain credentials
 Properties/PublishProfiles/*.pubxml
 Properties/PublishProfiles/*.publishsettings
