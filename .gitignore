@@ -1,60 +1,98 @@
-﻿# ==================================================
-
+# ==========================================
 # EMPTRACK - ASP.NET Core MVC
+# ==========================================
 
-# ==================================================
-
-# ---------- Build output ----------
-
+# Build outputs
 [Bb]in/
 [Oo]bj/
-artifacts/
+[Dd]ebug/
+[Rr]elease/
+[Aa]rtifacts/
 publish/
 
-# ---------- Visual Studio local files ----------
-
+# Visual Studio
 .vs/
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
 *.rsuser
+*.sln.ide
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
 *.DotSettings.user
 
-# ---------- Other IDE files ----------
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 
-.vscode/
-.idea/
+# .NET tooling
+project.lock.json
+project.fragment.lock.json
+artifacts/
+TestResults/
+coverage/
+coverage.*
 
-# ---------- Secrets and local configuration ----------
+# NuGet packages and temporary files
+*.nupkg
+*.snupkg
+.nuget/
 
+# Logs and diagnostic files
+*.log
+logs/
+*.tlog
+*.stackdump
+*.dmp
+
+# Local environment variables and secrets
 .env
 .env.*
 !.env.example
 secrets.json
-DataProtection-Keys/*.xml
+appsettings.Local.json
+appsettings.Development.local.json
 
-# ---------- Logs and temporary files ----------
+# User-specific configuration
+*.local.json
 
-*.log
-*.tmp
-*.temp
+# Database files - local development only
+*.mdf
+*.ldf
+*.db-shm
+*.db-wal
 
-# ---------- Test results and coverage ----------
-
-TestResults/
-coverage/
-.coverage
-*.coverage
-*.coveragexml
-
-# ---------- Generated NuGet packages ----------
-
-*.nupkg
-*.snupkg
-
-# ---------- Operating system files ----------
-
+# Operating system files
 .DS_Store
 Thumbs.db
-desktop.ini
+Desktop.ini
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.swp
+*.swo
+*~
+
+# Publish profiles may contain credentials
+Properties/PublishProfiles/*.pubxml
+Properties/PublishProfiles/*.publishsettings
+
+# Azure / deployment local settings
+.azure/
+
+# Node.js (if frontend tooling is added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Keep source code, project files, migrations,
+# static assets, Razor views, and documentation tracked.
