@@ -17,28 +17,33 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<EmployeeCodeService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
 builder.Services.AddDataProtection()
     .SetApplicationName("EMPTRACK")
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")));
+    .PersistKeysToFileSystem(
+        new DirectoryInfo(
+            Path.Combine(
+                builder.Environment.ContentRootPath,
+                "DataProtection-Keys")));
+
 builder.Services.AddSingleton<IPasswordProtectionService, PasswordProtectionService>();
 
-// Add cookie authentication.
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+// Cookie authentication.
+builder.Services.AddAuthentication(
+        CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Account/Login";
     });
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
-
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Centralized error handling in non-development environments.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
+    app.UseExceptionHandler("/Error/Index");
     app.UseHsts();
 }
 
@@ -51,9 +56,11 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
+// Root URL opens Login. Authenticated users are redirected to Dashboard
+// by AccountController.Login().
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Account}/{action=Login}/{id?}")
     .WithStaticAssets();
 
 app.Run();

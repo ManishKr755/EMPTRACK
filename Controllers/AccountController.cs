@@ -35,6 +35,10 @@ public class AccountController : Controller
     [AllowAnonymous]
     public IActionResult Login(string? returnUrl = null)
     {
+        // Authenticated users should not be shown the Login page again.
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectToAction("Index", "Dashboard");
+
         ViewData["ReturnUrl"] = returnUrl;
         return View();
     }
