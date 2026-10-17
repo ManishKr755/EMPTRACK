@@ -1,8 +1,4 @@
-﻿
-/* Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-for details on configuring this project to bundle and minify static web assets. */
-
-a.navbar-brand {
+﻿a.navbar-brand {
     white-space: normal;
     text-align: center;
     word-break: break-all;
@@ -42,7 +38,7 @@ button.accept-policy {
     line-height: inherit;
 }
 
-/* Footer flows after the page content */
+/* Footer remains in the normal page flow. */
 .footer {
     position: static;
     bottom: auto;
@@ -52,4 +48,40 @@ button.accept-policy {
     padding: 1rem 0;
     margin-top: auto;
     flex-shrink: 0;
+    background: #fff;
+}
+
+/* Employee creation page */
+.employee-create-page {
+    min-width: 0;
+    padding-bottom: 1rem;
+}
+
+    .employee-create-card,
+    .employee-create-page .card {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .employee-create-page .form-control,
+    .employee-create-page .form-select {
+        max-width: 100%;
+    }
+
+.employee-form-actions {
+    padding-bottom: .25rem;
+}
+
+@media (max-width: 767.98px) {
+    .employee-create-page .d-flex.justify-content-between {
+        align-items: flex-start !important;
+    }
+
+    .employee-form-actions {
+        justify-content: stretch !important;
+    }
+
+        .employee-form-actions .btn {
+            flex: 1 1 auto;
+        }
 }

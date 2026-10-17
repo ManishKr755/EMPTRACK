@@ -2,123 +2,275 @@
 
 @{
     ViewData["Title"] = "Create Employee";
-    var roles = ViewBag.Roles as IEnumerable<string> ?? Enumerable.Empty<string>();
-    var departments = ViewBag.Departments as IEnumerable<EMPTRACK.Models.Department> ?? Enumerable.Empty<EMPTRACK.Models.Department>();
-    var teams = ViewBag.Teams as IEnumerable<EMPTRACK.Models.Team> ?? Enumerable.Empty<EMPTRACK.Models.Team>();
-    var statuses = ViewBag.EmploymentStatuses as IEnumerable<string> ?? Enumerable.Empty<string>();
+
+    var roles = ViewBag.Roles as IEnumerable<string>
+        ?? Enumerable.Empty<string>();
+
+    var departments = ViewBag.Departments as IEnumerable<EMPTRACK.Models.Department>
+        ?? Enumerable.Empty<EMPTRACK.Models.Department>();
+
+    var teams = ViewBag.Teams as IEnumerable<EMPTRACK.Models.Team>
+        ?? Enumerable.Empty<EMPTRACK.Models.Team>();
+
+    var statuses = ViewBag.EmploymentStatuses as IEnumerable<string>
+        ?? Enumerable.Empty<string>();
+
+    var isAdmin = ViewBag.IsAdmin is bool admin && admin;
+    var hrHeadExists = ViewBag.HrHeadExists is bool exists && exists;
+
+    var headManagerDepartmentIds =
+        ViewBag.HeadManagerDepartmentIds as IEnumerable<int>
+        ?? Enumerable.Empty<int>();
 }
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid employee-create-page">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <div>
             <h2>Create Employee</h2>
-            <p class="text-muted mb-0">Add a new employee and create their login account.</p>
+            <p class="text-muted mb-0">
+                Add a new employee and create their login account.
+            </p>
         </div>
-        <a asp-action="Index" class="btn btn-outline-secondary">Back to Employees</a>
+
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            Back to Employees
+        </a>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card shadow-sm employee-create-card">
         <div class="card-body">
             <form asp-action="Create" method="post">
                 @Html.AntiForgeryToken()
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"
+                     role="alert"></div>
 
                 <div class="card mb-4">
-                    <div class="card-header"><strong>Personal Information</strong></div>
+                    <div class="card-header">
+                        <strong>Personal Information</strong>
+                    </div>
+
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label asp-for="FirstName" class="form-label"></label>
-                                <input asp-for="FirstName" class="form-control" autocomplete="given-name" />
-                                <span asp-validation-for="FirstName" class="text-danger"></span>
+                                <input asp-for="FirstName"
+                                       class="form-control"
+                                       autocomplete="given-name" />
+                                <span asp-validation-for="FirstName"
+                                      class="text-danger"></span>
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label asp-for="LastName" class="form-label"></label>
-                                <input asp-for="LastName" class="form-control" autocomplete="family-name" />
-                                <span asp-validation-for="LastName" class="text-danger"></span>
+                                <input asp-for="LastName"
+                                       class="form-control"
+                                       autocomplete="family-name" />
+                                <span asp-validation-for="LastName"
+                                      class="text-danger"></span>
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label asp-for="Email" class="form-label"></label>
-                                <input asp-for="Email" class="form-control" type="email" autocomplete="email" />
-                                <span asp-validation-for="Email" class="text-danger"></span>
+                                <input asp-for="Email"
+                                       class="form-control"
+                                       type="email"
+                                       autocomplete="email" />
+                                <span asp-validation-for="Email"
+                                      class="text-danger"></span>
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label asp-for="Phone" class="form-label"></label>
-                                <input asp-for="Phone" class="form-control" type="tel" />
-                                <span asp-validation-for="Phone" class="text-danger"></span>
+                                <input asp-for="Phone"
+                                       class="form-control"
+                                       type="tel"
+                                       autocomplete="tel" />
+                                <span asp-validation-for="Phone"
+                                      class="text-danger"></span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="card mb-4">
-                    <div class="card-header"><strong>Employment Information</strong></div>
+                    <div class="card-header">
+                        <strong>Employment Information</strong>
+                    </div>
+
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label asp-for="Role" class="form-label"></label>
-                                <select asp-for="Role" class="form-select">
-                                    <option value="">-- Select Role --</option>
-                                    @foreach (var role in roles) { <option value="@role">@role</option> }
+                                <label asp-for="DepartmentId" class="form-label"></label>
+
+                                <select asp-for="DepartmentId"
+                                        class="form-select"
+                                        id="departmentSelect">
+                                    <option value="">-- Select Department --</option>
+
+                                    @foreach (var department in departments)
+                                    {
+                                        var isHrDepartment =
+                                            string.Equals(
+                                                department.Name,
+                                                "HR",
+                                                StringComparison.OrdinalIgnoreCase)
+                                            || string.Equals(
+                                                department.Code,
+                                                "01",
+                                                StringComparison.OrdinalIgnoreCase);
+
+                                        <option value="@department.DepartmentId"
+                                                data-is-hr="@isHrDepartment.ToString().ToLowerInvariant()">
+                                            @department.Name
+                                        </option>
+                                    }
                                 </select>
-                                <span asp-validation-for="Role" class="text-danger"></span>
+
+                                <span asp-validation-for="DepartmentId"
+                                      class="text-danger"></span>
                             </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Role" class="form-label"></label>
+
+                                <select asp-for="Role"
+                                        class="form-select"
+                                        id="roleSelect"
+                                        disabled>
+                                    <option value="">-- Select Department First --</option>
+
+                                    @foreach (var role in roles)
+                                    {
+                                        var isHrRole =
+                                            string.Equals(role, "HR",
+                                                StringComparison.OrdinalIgnoreCase)
+                                            || string.Equals(role, "HR Head",
+                                                StringComparison.OrdinalIgnoreCase);
+
+                                        var isHrHead =
+                                            string.Equals(role, "HR Head",
+                                                StringComparison.OrdinalIgnoreCase);
+
+                                        var isHeadManager =
+                                            string.Equals(role, "Head Manager",
+                                                StringComparison.OrdinalIgnoreCase);
+
+                                        var hrHeadUnavailable =
+                                            isHrHead && (!isAdmin || hrHeadExists);
+
+                                        <option value="@role"
+                                                data-is-hr-role="@isHrRole.ToString().ToLowerInvariant()"
+                                                data-is-hr-head="@isHrHead.ToString().ToLowerInvariant()"
+                                                data-is-head-manager="@isHeadManager.ToString().ToLowerInvariant()"
+                                                disabled="@hrHeadUnavailable">
+                                            @role
+                                        </option>
+                                    }
+                                </select>
+
+                                <span asp-validation-for="Role"
+                                      class="text-danger"></span>
+                            </div>
+
                             <div class="col-md-6 mb-3">
                                 <label asp-for="EmploymentStatus" class="form-label"></label>
+
                                 <select asp-for="EmploymentStatus" class="form-select">
                                     <option value="">-- Select Status --</option>
-                                    @foreach (var status in statuses) { <option value="@status">@status</option> }
+
+                                    @foreach (var status in statuses)
+                                    {
+                                        <option value="@status">@status</option>
+                                    }
                                 </select>
-                                <span asp-validation-for="EmploymentStatus" class="text-danger"></span>
+
+                                <span asp-validation-for="EmploymentStatus"
+                                      class="text-danger"></span>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="DepartmentId" class="form-label"></label>
-                                <select asp-for="DepartmentId" class="form-select" id="departmentSelect">
-                                    <option value="">-- Select Department --</option>
-                                    @foreach (var department in departments) { <option value="@department.DepartmentId">@department.Name</option> }
-                                </select>
-                                <span asp-validation-for="DepartmentId" class="text-danger"></span>
-                            </div>
+
                             <div class="col-md-6 mb-3">
                                 <label asp-for="TeamId" class="form-label"></label>
-                                <select asp-for="TeamId" class="form-select" id="teamSelect">
+
+                                <select asp-for="TeamId"
+                                        class="form-select"
+                                        id="teamSelect">
                                     <option value="">-- No Team --</option>
-                                    @foreach (var team in teams) { <option value="@team.TeamId" data-department="@team.DepartmentId">@team.Name</option> }
+
+                                    @foreach (var team in teams)
+                                    {
+                                        <option value="@team.TeamId"
+                                                data-department="@team.DepartmentId">
+                                            @team.Name
+                                        </option>
+                                    }
                                 </select>
-                                <span asp-validation-for="TeamId" class="text-danger"></span>
+
+                                <span asp-validation-for="TeamId"
+                                      class="text-danger"></span>
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label asp-for="JoiningDate" class="form-label"></label>
-                                <input asp-for="JoiningDate" class="form-control" type="date" />
-                                <span asp-validation-for="JoiningDate" class="text-danger"></span>
+                                <input asp-for="JoiningDate"
+                                       class="form-control"
+                                       type="date" />
+                                <span asp-validation-for="JoiningDate"
+                                      class="text-danger"></span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="card mb-4">
-                    <div class="card-header"><strong>Login Account</strong></div>
+                    <div class="card-header">
+                        <strong>Login Account</strong>
+                    </div>
+
                     <div class="card-body">
-                        <div class="alert alert-info">The username is generated automatically as <strong>FirstName + EmployeeCode</strong> after the employee code is created.</div>
+                        <div class="alert alert-info">
+                            The username is generated automatically as
+                            <strong>FirstName + EmployeeCode</strong>
+                            after the employee code is created.
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label asp-for="InitialPassword" class="form-label"></label>
-                                <input asp-for="InitialPassword" class="form-control" type="password" autocomplete="new-password" />
-                                <div class="form-text">8–15 characters, uppercase, lowercase, number, special character, no spaces.</div>
-                                <span asp-validation-for="InitialPassword" class="text-danger"></span>
+                                <input asp-for="InitialPassword"
+                                       class="form-control"
+                                       type="password"
+                                       autocomplete="new-password" />
+
+                                <div class="form-text">
+                                    8–15 characters, uppercase, lowercase, number,
+                                    special character, no spaces.
+                                </div>
+
+                                <span asp-validation-for="InitialPassword"
+                                      class="text-danger"></span>
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label asp-for="ConfirmPassword" class="form-label"></label>
-                                <input asp-for="ConfirmPassword" class="form-control" type="password" autocomplete="new-password" />
-                                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                                <input asp-for="ConfirmPassword"
+                                       class="form-control"
+                                       type="password"
+                                       autocomplete="new-password" />
+                                <span asp-validation-for="ConfirmPassword"
+                                      class="text-danger"></span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2">
+                <div class="d-flex justify-content-end flex-wrap gap-2 employee-form-actions">
                     <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Create Employee &amp; Account</button>
+
+                    <button type="submit" class="btn btn-primary">
+                        Create Employee &amp; Account
+                    </button>
                 </div>
             </form>
         </div>
@@ -127,20 +279,107 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const department = document.getElementById("departmentSelect");
-            const team = document.getElementById("teamSelect");
-            if (!department || !team) return;
-            function filterTeams() {
-                const value = department.value;
-                Array.from(team.options).forEach(option => {
-                    if (!option.value) { option.hidden = false; return; }
-                    option.hidden = value !== "" && option.dataset.department !== value;
-                });
-                if (team.selectedOptions[0]?.hidden) team.value = "";
+            const departmentSelect = document.getElementById("departmentSelect");
+            const roleSelect = document.getElementById("roleSelect");
+            const teamSelect = document.getElementById("teamSelect");
+
+            if (!departmentSelect || !roleSelect || !teamSelect) {
+                return;
             }
-            department.addEventListener("change", filterTeams);
+
+            const roleOptions = Array.from(roleSelect.options)
+                .filter(option => option.value !== "");
+
+            const headManagerDepartmentIds = new Set(
+                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    headManagerDepartmentIds))
+            );
+
+            function filterRoles() {
+                const departmentId = departmentSelect.value;
+                const selectedDepartment =
+                    departmentSelect.options[departmentSelect.selectedIndex];
+
+                const departmentSelected = departmentId !== "";
+                const isHrDepartment =
+                    departmentSelected &&
+                    selectedDepartment.dataset.isHr === "true";
+
+                const previousRole = roleSelect.value;
+
+                roleSelect.value = "";
+                roleSelect.disabled = !departmentSelected;
+
+                roleOptions.forEach(function (option) {
+                    const isHrRole = option.dataset.isHrRole === "true";
+                    const isHrHead = option.dataset.isHrHead === "true";
+                    const isHeadManager =
+                        option.dataset.isHeadManager === "true";
+
+                    const matchesDepartment = departmentSelected &&
+                        (isHrDepartment ? isHrRole : !isHrRole);
+
+                    const headManagerAlreadyExists =
+                        isHeadManager &&
+                        headManagerDepartmentIds.has(Number(departmentId));
+
+                    const hrHeadUnavailable =
+                        isHrHead && option.disabled;
+
+                    option.hidden = !matchesDepartment;
+
+                    option.disabled =
+                        !matchesDepartment ||
+                        headManagerAlreadyExists ||
+                        hrHeadUnavailable;
+                });
+
+                roleSelect.options[0].text = departmentSelected
+                    ? "-- Select Role --"
+                    : "-- Select Department First --";
+
+                const previousOption = roleOptions.find(function (option) {
+                    return option.value === previousRole &&
+                        !option.hidden &&
+                        !option.disabled;
+                });
+
+                if (previousOption) {
+                    roleSelect.value = previousRole;
+                }
+            }
+
+            function filterTeams() {
+                const departmentId = departmentSelect.value;
+
+                Array.from(teamSelect.options).forEach(function (option) {
+                    if (option.value === "") {
+                        option.hidden = false;
+                        return;
+                    }
+
+                    option.hidden =
+                        departmentId !== "" &&
+                        option.dataset.department !== departmentId;
+                });
+
+                const selectedTeam =
+                    teamSelect.options[teamSelect.selectedIndex];
+
+                if (selectedTeam && selectedTeam.hidden) {
+                    teamSelect.value = "";
+                }
+            }
+
+            departmentSelect.addEventListener("change", function () {
+                filterRoles();
+                filterTeams();
+            });
+
+            filterRoles();
             filterTeams();
         });
     </script>
