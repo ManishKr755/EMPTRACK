@@ -1,0 +1,36 @@
+@model ErrorViewModel
+
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 text-center">
+            <h1 class="text-danger mb-3">Something went wrong</h1>
+
+            <p class="lead">
+                An unexpected error occurred while processing your request.
+            </p>
+
+            <p class="text-muted">
+                Please try again later. If the problem continues,
+                contact your system administrator.
+            </p>
+
+            @if (Model.ShowRequestId)
+            {
+                <div class="alert alert-light border mt-4">
+                    <strong>Request ID:</strong>
+                    <code>@Model.RequestId</code>
+                </div>
+            }
+
+            <a asp-controller="Account"
+               asp-action="Login"
+               class="btn btn-primary mt-3">
+                Return to Login
+            </a>
+        </div>
+    </div>
+</div>
