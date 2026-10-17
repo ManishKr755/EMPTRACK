@@ -47,7 +47,7 @@ public class DepartmentsController : Controller
         ViewData["Search"] = search;
 
         var departments = await query
-            .OrderBy(d => d.Name)
+            .OrderBy(d => d.Code)
             .ToListAsync();
 
         return View(departments);
