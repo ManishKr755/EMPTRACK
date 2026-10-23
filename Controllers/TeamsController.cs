@@ -14,12 +14,10 @@ namespace EMPTRACK.Controllers;
 public class TeamsController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
 
-    public TeamsController(ApplicationDbContext context, IAuditLogService auditLogService)
+    public TeamsController(ApplicationDbContext context)
     {
         _context = context;
-        _auditLogService = auditLogService;
     }
 
     // GET: /Teams
@@ -137,7 +135,6 @@ public class TeamsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "CREATE", "Team", $"Team {team.TeamId} - {team.Name} was created.");
         }
         catch (DbUpdateException)
         {
@@ -265,11 +262,6 @@ public class TeamsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(
-            GetCurrentUserAccountIdForAudit(),
-                "UPDATE",
-                "Team",
-                $"Team {existingTeam.TeamId} - {existingTeam.Name} was updated.");
         }
         catch (DbUpdateException)
         {
@@ -458,16 +450,4 @@ public class TeamsController : Controller
             })
             .ToList();
     }
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-
-        if (claim == null || !int.TryParse(claim.Value, out var userAccountId))
-        {
-            throw new InvalidOperationException("The authenticated UserAccountId could not be determined.");
-        }
-
-        return userAccountId;
-    }
-
 }

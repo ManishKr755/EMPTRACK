@@ -16,7 +16,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<EmployeeCodeService>();
 builder.Services.AddScoped<NotificationService>();
-builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 builder.Services.AddDataProtection()
     .SetApplicationName("EMPTRACK")

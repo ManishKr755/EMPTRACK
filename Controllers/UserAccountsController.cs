@@ -14,14 +14,12 @@ namespace EMPTRACK.Controllers;
 public class UserAccountsController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
     private readonly IPasswordProtectionService _passwordProtection;
     private readonly PasswordHasher<UserAccount> _passwordHasher;
 
-    public UserAccountsController(ApplicationDbContext context, IAuditLogService auditLogService, IPasswordProtectionService passwordProtection)
+    public UserAccountsController(ApplicationDbContext context, IPasswordProtectionService passwordProtection)
     {
         _context = context;
-        _auditLogService = auditLogService;
         _passwordProtection = passwordProtection;
         _passwordHasher = new PasswordHasher<UserAccount>();
     }
@@ -43,7 +41,7 @@ public class UserAccountsController : Controller
     public async Task<IActionResult> Details(int? id)
     {
         if (!id.HasValue) return NotFound();
-        var account = await _context.UserAccounts.Include(u => u.Employee).Include(u => u.ApprovedLeaveRequests).Include(u => u.AuditLogs).SingleOrDefaultAsync(u => u.UserAccountId == id.Value);
+        var account = await _context.UserAccounts.Include(u => u.Employee).Include(u => u.ApprovedLeaveRequests).SingleOrDefaultAsync(u => u.UserAccountId == id.Value);
         if (account == null) return NotFound();
         return View(account);
     }
@@ -80,7 +78,6 @@ public class UserAccountsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "CREATE", "UserAccount", $"User account {account.Username} was created.");
         }
         catch (DbUpdateException)
         {
@@ -130,7 +127,6 @@ public class UserAccountsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "UPDATE", "UserAccount", $"User account {account.Username} was updated.");
         }
         catch (DbUpdateException)
         {
@@ -165,7 +161,6 @@ public class UserAccountsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "PASSWORD_CHANGE", "UserAccount", $"Password for {account.Username} was changed by Admin.");
         }
         catch (DbUpdateException) { ModelState.AddModelError(string.Empty, "The password could not be updated."); return View(model); }
         TempData["SuccessMessage"] = "Password updated successfully.";
@@ -191,10 +186,4 @@ public class UserAccountsController : Controller
         if (!password.Any(ch => !char.IsLetterOrDigit(ch) && !char.IsWhiteSpace(ch))) ModelState.AddModelError(fieldName, "Password must contain at least one special character.");
     }
 
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-        if (claim == null || !int.TryParse(claim.Value, out var id)) throw new InvalidOperationException("The authenticated UserAccountId could not be determined.");
-        return id;
-    }
 }

@@ -420,23 +420,6 @@ END;
 GO
 
 
--- ---------------------------------------------
--- AuditLog -> UserAccount
--- ---------------------------------------------
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM sys.foreign_keys
-    WHERE name = 'FK_AuditLog_UserAccount'
-)
-BEGIN
-    ALTER TABLE dbo.AuditLog
-    ADD CONSTRAINT FK_AuditLog_UserAccount
-        FOREIGN KEY (UserAccountId)
-        REFERENCES dbo.UserAccount(UserAccountId);
-END;
-GO
-
 -- =============================================
 -- 3. UNIQUE CONSTRAINTS
 -- =============================================

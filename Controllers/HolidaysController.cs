@@ -12,12 +12,10 @@ namespace EMPTRACK.Controllers;
 public class HolidaysController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
 
-    public HolidaysController(ApplicationDbContext context, IAuditLogService auditLogService)
+    public HolidaysController(ApplicationDbContext context)
     {
         _context = context;
-        _auditLogService = auditLogService;
     }
 
     // GET: /Holidays
@@ -84,7 +82,6 @@ public class HolidaysController : Controller
 
         _context.Holidays.Add(holiday);
         await _context.SaveChangesAsync();
-        await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "CREATE", "Holiday", $"Holiday \"{holiday.Name}\" was created.");
 
         TempData["SuccessMessage"] = "Holiday created successfully.";
 
@@ -148,7 +145,6 @@ public class HolidaysController : Controller
         holiday.Date = model.Date;
 
         await _context.SaveChangesAsync();
-        await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "UPDATE", "Holiday", $"Holiday \"{holiday.Name}\" was updated.");
 
         TempData["SuccessMessage"] = "Holiday updated successfully.";
 
@@ -193,22 +189,9 @@ public class HolidaysController : Controller
 
         _context.Holidays.Remove(holiday);
         await _context.SaveChangesAsync();
-        await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "DELETE", "Holiday", $"Holiday \"{holiday.Name}\" was deleted.");
 
         TempData["SuccessMessage"] = "Holiday deleted successfully.";
 
         return RedirectToAction(nameof(Index));
     }
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-
-        if (claim == null || !int.TryParse(claim.Value, out var userAccountId))
-        {
-            throw new InvalidOperationException("The authenticated UserAccountId could not be determined.");
-        }
-
-        return userAccountId;
-    }
-
 }

@@ -27,7 +27,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<Holiday> Holidays => Set<Holiday>();
     public DbSet<Concern> Concerns => Set<Concern>();
     public DbSet<ConcernMessage> ConcernMessages => Set<ConcernMessage>();
-    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -638,38 +637,5 @@ public class ApplicationDbContext : DbContext
                 .IsRequired();
         });
 
-        // ============================================================
-        // AuditLog
-        // ============================================================
-
-        modelBuilder.Entity<AuditLog>(entity =>
-        {
-            entity.ToTable("AuditLog");
-
-            entity.HasKey(e => e.AuditLogId);
-
-            entity.Property(e => e.AuditLogId)
-                .ValueGeneratedOnAdd();
-
-            entity.Property(e => e.UserAccountId)
-                .IsRequired();
-
-            entity.Property(e => e.Action)
-                .IsRequired();
-
-            entity.Property(e => e.Target)
-                .IsRequired();
-
-            entity.Property(e => e.DateTime)
-                .IsRequired();
-
-            entity.Property(e => e.Description)
-                .IsRequired();
-
-            entity.HasOne(e => e.UserAccount)
-                .WithMany(e => e.AuditLogs)
-                .HasForeignKey(e => e.UserAccountId)
-                .IsRequired();
-        });
     }
 }

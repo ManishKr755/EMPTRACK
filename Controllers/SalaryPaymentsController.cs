@@ -15,12 +15,10 @@ namespace EMPTRACK.Controllers;
 public class SalaryPaymentsController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
 
-    public SalaryPaymentsController(ApplicationDbContext context, IAuditLogService auditLogService)
+    public SalaryPaymentsController(ApplicationDbContext context)
     {
         _context = context;
-        _auditLogService = auditLogService;
     }
 
     // GET: /SalaryPayments
@@ -203,7 +201,6 @@ public class SalaryPaymentsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "CREATE", "SalaryPayment", $"Salary payment {payment.PaymentId} was created.");
         }
         catch (DbUpdateException)
         {
@@ -314,7 +311,6 @@ public class SalaryPaymentsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "UPDATE", "SalaryPayment", $"Salary payment {payment.PaymentId} was updated.");
         }
         catch (DbUpdateException)
         {
@@ -386,7 +382,6 @@ public class SalaryPaymentsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "DELETE", "SalaryPayment", $"Salary payment {payment.PaymentId} was deleted.");
         }
         catch (DbUpdateException)
         {
@@ -530,16 +525,4 @@ public class SalaryPaymentsController : Controller
             })
             .ToList();
     }
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-
-        if (claim == null || !int.TryParse(claim.Value, out var userAccountId))
-        {
-            throw new InvalidOperationException("The authenticated UserAccountId could not be determined.");
-        }
-
-        return userAccountId;
-    }
-
 }

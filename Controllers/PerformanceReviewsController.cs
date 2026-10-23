@@ -14,12 +14,10 @@ namespace EMPTRACK.Controllers;
 public class PerformanceReviewsController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
 
-    public PerformanceReviewsController(ApplicationDbContext context, IAuditLogService auditLogService)
+    public PerformanceReviewsController(ApplicationDbContext context)
     {
         _context = context;
-        _auditLogService = auditLogService;
     }
 
     // GET: /PerformanceReviews
@@ -202,7 +200,6 @@ public class PerformanceReviewsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "CREATE", "PerformanceReview", $"Performance review {review.ReviewId} was created.");
         }
         catch (DbUpdateException)
         {
@@ -335,7 +332,6 @@ public class PerformanceReviewsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "UPDATE", "PerformanceReview", $"Performance review {review.ReviewId} was updated.");
         }
         catch (DbUpdateException)
         {
@@ -412,7 +408,6 @@ public class PerformanceReviewsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "DELETE", "PerformanceReview", $"Performance review {review.ReviewId} was deleted.");
         }
         catch (DbUpdateException)
         {
@@ -825,16 +820,4 @@ public class PerformanceReviewsController : Controller
             })
             .ToList();
     }
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-
-        if (claim == null || !int.TryParse(claim.Value, out var userAccountId))
-        {
-            throw new InvalidOperationException("The authenticated UserAccountId could not be determined.");
-        }
-
-        return userAccountId;
-    }
-
 }

@@ -17,12 +17,10 @@ public class DepartmentsController : Controller
     private const string HrDepartmentCode = "01";
 
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
 
-    public DepartmentsController(ApplicationDbContext context, IAuditLogService auditLogService)
+    public DepartmentsController(ApplicationDbContext context)
     {
         _context = context;
-        _auditLogService = auditLogService;
     }
 
     // GET: /Departments
@@ -125,7 +123,6 @@ public class DepartmentsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "CREATE", "Department", $"Department {department.Code} - {department.Name} was created.");
         }
         catch (DbUpdateException)
         {
@@ -253,7 +250,6 @@ public class DepartmentsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "UPDATE", "Department", $"Department {department.Code} - {department.Name} was updated.");
         }
         catch (DbUpdateException)
         {
@@ -394,18 +390,6 @@ public class DepartmentsController : Controller
             Text = $"{e.EmployeeCode} - {e.FirstName} {e.LastName}",
             Selected = selectedEmployeeId == e.EmployeeId
         }).ToList();
-    }
-
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-
-        if (claim == null || !int.TryParse(claim.Value, out var userAccountId))
-        {
-            throw new InvalidOperationException("The authenticated UserAccountId could not be determined.");
-        }
-
-        return userAccountId;
     }
 
 }

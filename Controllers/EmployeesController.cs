@@ -14,7 +14,6 @@ namespace EMPTRACK.Controllers;
 public class EmployeesController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
     private readonly EmployeeCodeService _employeeCodeService;
     private readonly PasswordHasher<UserAccount> _passwordHasher;
     private readonly IPasswordProtectionService _passwordProtection;
@@ -22,12 +21,10 @@ public class EmployeesController : Controller
     public EmployeesController(
         ApplicationDbContext context,
         EmployeeCodeService employeeCodeService,
-        IAuditLogService auditLogService,
         IPasswordProtectionService passwordProtection)
     {
         _context = context;
         _employeeCodeService = employeeCodeService;
-        _auditLogService = auditLogService;
         _passwordHasher = new PasswordHasher<UserAccount>();
         _passwordProtection = passwordProtection;
     }
@@ -319,11 +316,6 @@ public class EmployeesController : Controller
         {
             await _context.SaveChangesAsync();
 
-            await _auditLogService.LogAsync(
-                GetCurrentUserAccountIdForAudit(),
-                "CREATE",
-                "Employee",
-                $"Employee {employee.EmployeeCode} and login account {username} were created.");
         }
         catch (DbUpdateException)
         {
@@ -537,20 +529,6 @@ public class EmployeesController : Controller
         {
             await _context.SaveChangesAsync();
 
-            await _auditLogService.LogAsync(
-                GetCurrentUserAccountIdForAudit(),
-                "UPDATE",
-                "Employee",
-                $"Employee {employee.EmployeeCode} was updated.");
-
-            if (passwordRequested)
-            {
-                await _auditLogService.LogAsync(
-                    GetCurrentUserAccountIdForAudit(),
-                    "PASSWORD_CHANGE",
-                    "UserAccount",
-                    $"Password for employee {employee.EmployeeCode} was changed by Admin.");
-            }
         }
         catch (DbUpdateException)
         {
@@ -938,7 +916,6 @@ public class EmployeesController : Controller
             }
         }
 
-
         if (!string.IsNullOrWhiteSpace(model.Email))
         {
             var email = model.Email.Trim();
@@ -1121,17 +1098,4 @@ public class EmployeesController : Controller
         }
     }
 
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(ClaimTypes.NameIdentifier);
-
-        if (claim == null ||
-            !int.TryParse(claim.Value, out var userAccountId))
-        {
-            throw new InvalidOperationException(
-                "The authenticated UserAccountId could not be determined.");
-        }
-
-        return userAccountId;
-    }
 }

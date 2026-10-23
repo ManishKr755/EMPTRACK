@@ -15,7 +15,6 @@ namespace EMPTRACK.Controllers;
 public class LeaveRequestsController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
 
     private static readonly string[] RequestViewerRoles =
     {
@@ -26,10 +25,9 @@ public class LeaveRequestsController : Controller
         "Manager"
     };
 
-    public LeaveRequestsController(ApplicationDbContext context, IAuditLogService auditLogService)
+    public LeaveRequestsController(ApplicationDbContext context)
     {
         _context = context;
-        _auditLogService = auditLogService;
     }
 
     // GET: /LeaveRequests
@@ -315,12 +313,6 @@ public class LeaveRequestsController : Controller
             await _context.Database.ExecuteSqlInterpolatedAsync(
     $"EXEC dbo.ApproveLeaveRequest @LeaveRequestId = {id}, @ApprovedByUserId = {currentUser.UserAccountId}");
 
-            await _auditLogService.LogAsync(
-                currentUser.UserAccountId,
-                "APPROVE",
-                "LeaveRequest",
-                $"Leave request {id} approved.");
-
             TempData["SuccessMessage"] =
                 "Leave request approved successfully.";
         }
@@ -401,12 +393,6 @@ public class LeaveRequestsController : Controller
         {
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-
-            await _auditLogService.LogAsync(
-                currentUser.UserAccountId,
-                "REJECT",
-                "LeaveRequest",
-                $"Leave request {id} rejected.");
 
             TempData["SuccessMessage"] =
                 "Leave request rejected successfully.";
@@ -572,7 +558,6 @@ public class LeaveRequestsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "CREATE", "LeaveRequest", $"Leave request {leaveRequest.LeaveRequestId} was created.");
         }
         catch (DbUpdateException)
         {
@@ -835,16 +820,4 @@ public class LeaveRequestsController : Controller
             })
             .ToList();
     }
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-
-        if (claim == null || !int.TryParse(claim.Value, out var userAccountId))
-        {
-            throw new InvalidOperationException("The authenticated UserAccountId could not be determined.");
-        }
-
-        return userAccountId;
-    }
-
 }

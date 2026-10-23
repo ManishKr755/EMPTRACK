@@ -105,14 +105,6 @@
                             </a>
                         }
 
-                        @if (User.IsInRole("Admin") || User.IsInRole("HR Head"))
-                        {
-                            <div class="sidebar-section-title">Administration</div>
-                            <a class="sidebar-link" asp-controller="AuditLogs" asp-action="Index">
-                                <span class="sidebar-icon">≡</span><span>Audit Logs</span>
-                            </a>
-                        }
-
                         <div class="sidebar-section-title">Account</div>
                         <button type="button" class="sidebar-link sidebar-button" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                             <span class="sidebar-icon">🔒</span><span>Change Password</span>

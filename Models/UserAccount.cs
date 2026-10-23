@@ -21,6 +21,4 @@ public class UserAccount
     public ICollection<LeaveRequest> ApprovedLeaveRequests { get; set; }
         = new List<LeaveRequest>();
 
-    public ICollection<AuditLog> AuditLogs { get; set; }
-        = new List<AuditLog>();
 }

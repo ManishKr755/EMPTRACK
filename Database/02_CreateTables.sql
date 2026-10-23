@@ -251,19 +251,3 @@ CREATE TABLE ConcernMessage
     CreatedAt DATETIME2 NOT NULL
 );
 GO
-
-
-/* =========================================================
-   17. AuditLog
-   ========================================================= */
-
-CREATE TABLE AuditLog
-(
-    AuditLogId INT IDENTITY(1,1) PRIMARY KEY,
-    UserAccountId INT NOT NULL,
-    Action NVARCHAR(100) NOT NULL,
-    Target NVARCHAR(200) NOT NULL,
-    [DateTime] DATETIME2 NOT NULL,
-    Description NVARCHAR(1000) NULL
-);
-GO

@@ -22,12 +22,10 @@ public class ConcernsController : Controller
     };
 
     private readonly ApplicationDbContext _context;
-    private readonly IAuditLogService _auditLogService;
 
-    public ConcernsController(ApplicationDbContext context, IAuditLogService auditLogService)
+    public ConcernsController(ApplicationDbContext context)
     {
         _context = context;
-        _auditLogService = auditLogService;
     }
 
     // GET: /Concerns
@@ -234,7 +232,6 @@ public class ConcernsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "CREATE", "Concern", $"Concern {concern.ConcernId} was created.");
         }
         catch (DbUpdateException)
         {
@@ -296,7 +293,6 @@ public class ConcernsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "STATUS CHANGE", "Concern", $"Concern {concern.ConcernId} status changed to {concern.Status}.");
         }
         catch (DbUpdateException)
         {
@@ -362,7 +358,6 @@ public class ConcernsController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            await _auditLogService.LogAsync(GetCurrentUserAccountIdForAudit(), "DELETE", "Concern", $"Concern {concern.ConcernId} was deleted.");
         }
         catch (DbUpdateException)
         {
@@ -416,16 +411,4 @@ public class ConcernsController : Controller
             ? employeeId
             : null;
     }
-    private int GetCurrentUserAccountIdForAudit()
-    {
-        var claim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-
-        if (claim == null || !int.TryParse(claim.Value, out var userAccountId))
-        {
-            throw new InvalidOperationException("The authenticated UserAccountId could not be determined.");
-        }
-
-        return userAccountId;
-    }
-
 }

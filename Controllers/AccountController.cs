@@ -18,15 +18,12 @@ public class AccountController : Controller
     private readonly ApplicationDbContext _context;
     private readonly PasswordHasher<UserAccount> _passwordHasher;
     private readonly IPasswordProtectionService _passwordProtection;
-    private readonly IAuditLogService _auditLogService;
 
     public AccountController(
         ApplicationDbContext context,
-        IAuditLogService auditLogService,
         IPasswordProtectionService passwordProtection)
     {
         _context = context;
-        _auditLogService = auditLogService;
         _passwordProtection = passwordProtection;
         _passwordHasher = new PasswordHasher<UserAccount>();
     }
@@ -99,9 +96,6 @@ public class AccountController : Controller
             CookieAuthenticationDefaults.AuthenticationScheme,
             new ClaimsPrincipal(identity));
 
-        await _auditLogService.LogAsync(
-            userAccount.UserAccountId, "LOGIN", "UserAccount", "User logged in successfully.");
-
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
             return Redirect(returnUrl);
 
@@ -140,8 +134,6 @@ public class AccountController : Controller
             account.EncryptedPassword = _passwordProtection.Protect(model.NewPassword);
 
         await _context.SaveChangesAsync();
-        await _auditLogService.LogAsync(
-            account.UserAccountId, "PASSWORD_CHANGE", "UserAccount", "User changed their own password.");
 
         TempData["PasswordSuccess"] = "Password changed successfully.";
         return RedirectToAction("Index", "Dashboard");
@@ -152,13 +144,6 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
-        var claim = User.FindFirst(ClaimTypes.NameIdentifier);
-        if (claim != null && int.TryParse(claim.Value, out var userAccountId))
-        {
-            await _auditLogService.LogAsync(
-                userAccountId, "LOGOUT", "UserAccount", "User logged out.");
-        }
-
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction("Login", "Account");
     }
