@@ -16,6 +16,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<EmployeeCodeService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<LeaveBalanceService>();
+builder.Services.AddHostedService<LeaveBalanceAccrualWorker>();
 
 builder.Services.AddDataProtection()
     .SetApplicationName("EMPTRACK")

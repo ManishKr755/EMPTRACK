@@ -17,16 +17,19 @@ public class EmployeesController : Controller
     private readonly EmployeeCodeService _employeeCodeService;
     private readonly PasswordHasher<UserAccount> _passwordHasher;
     private readonly IPasswordProtectionService _passwordProtection;
+    private readonly LeaveBalanceService _leaveBalanceService;
 
     public EmployeesController(
         ApplicationDbContext context,
         EmployeeCodeService employeeCodeService,
-        IPasswordProtectionService passwordProtection)
+        IPasswordProtectionService passwordProtection,
+        LeaveBalanceService leaveBalanceService)
     {
         _context = context;
         _employeeCodeService = employeeCodeService;
         _passwordHasher = new PasswordHasher<UserAccount>();
         _passwordProtection = passwordProtection;
+        _leaveBalanceService = leaveBalanceService;
     }
 
     // ============================================================
@@ -315,6 +318,7 @@ public class EmployeesController : Controller
         try
         {
             await _context.SaveChangesAsync();
+            await _leaveBalanceService.EnsureAndAccrueAsync();
 
         }
         catch (DbUpdateException)
@@ -528,6 +532,7 @@ public class EmployeesController : Controller
         try
         {
             await _context.SaveChangesAsync();
+            await _leaveBalanceService.EnsureAndAccrueAsync();
 
         }
         catch (DbUpdateException)

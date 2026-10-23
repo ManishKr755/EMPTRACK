@@ -20,10 +20,24 @@ public class DashboardController : Controller
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
 
-        ViewBag.Username = User.Identity?.Name ?? "User";
-
         var employeeIdClaim = User.FindFirst("EmployeeId")?.Value;
-        ViewBag.EmployeeId = employeeIdClaim;
+        var displayName = User.Identity?.Name ?? "User";
+
+        if (int.TryParse(employeeIdClaim, out var linkedEmployeeId))
+        {
+            var employeeName = await _context.Employees
+                .AsNoTracking()
+                .Where(e => e.EmployeeId == linkedEmployeeId)
+                .Select(e => e.FirstName + " " + e.LastName)
+                .SingleOrDefaultAsync();
+
+            if (!string.IsNullOrWhiteSpace(employeeName))
+            {
+                displayName = employeeName;
+            }
+        }
+
+        ViewBag.Username = displayName;
 
         var isManagementView = IsManagementUser();
         ViewBag.IsManagementView = isManagementView;

@@ -13,10 +13,12 @@
             </p>
         </div>
 
-        <a asp-action="Create"
-           class="btn btn-primary">
-            + New Task
-        </a>
+        @if (!User.IsInRole("Admin"))
+        {
+            <a asp-action="Create" class="btn btn-primary">
+                + New Task
+            </a>
+        }
     </div>
 
     @if (TempData["SuccessMessage"] != null)

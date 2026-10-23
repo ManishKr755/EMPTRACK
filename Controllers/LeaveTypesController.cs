@@ -1,6 +1,7 @@
-﻿using EMPTRACK.Data;
+using EMPTRACK.Data;
 using EMPTRACK.Models;
 using EMPTRACK.Models.ViewModels;
+using EMPTRACK.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,12 @@ namespace EMPTRACK.Controllers;
 public class LeaveTypesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly LeaveBalanceService _leaveBalanceService;
 
-    public LeaveTypesController(ApplicationDbContext context)
+    public LeaveTypesController(ApplicationDbContext context, LeaveBalanceService leaveBalanceService)
     {
         _context = context;
+        _leaveBalanceService = leaveBalanceService;
     }
 
     // GET: /LeaveTypes
@@ -132,6 +135,7 @@ public class LeaveTypesController : Controller
         try
         {
             await _context.SaveChangesAsync();
+            await _leaveBalanceService.EnsureAndAccrueAsync();
         }
         catch (DbUpdateException)
         {

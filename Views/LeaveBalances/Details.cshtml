@@ -1,100 +1,38 @@
-﻿@model EMPTRACK.Models.LeaveBalance
-
+@model EMPTRACK.Models.ViewModels.EmployeeLeaveBalanceDetailViewModel
 @{
-    ViewData["Title"] = "Leave Balance Details";
+    ViewData["Title"] = "Employee Leave Balance Details";
 }
-
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
             <h1 class="h3 mb-1">Leave Balance Details</h1>
-
-            <p class="text-muted mb-0">
-                @Model.Employee.FirstName
-                @Model.Employee.LastName
-                -
-                @Model.LeaveType.Name
-            </p>
+            <p class="text-muted mb-0">@Model.EmployeeName · @Model.EmployeeCode</p>
         </div>
-
-        <div class="d-flex gap-2">
-            <a asp-action="Edit"
-               asp-route-id="@Model.LeaveBalanceId"
-               class="btn btn-primary">
-                Edit
-            </a>
-
-            <a asp-action="Index"
-               class="btn btn-outline-secondary">
-                Back
-            </a>
-        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to Leave Balances</a>
     </div>
-
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <strong>Balance Information</strong>
-                </div>
-
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-5">
-                            Balance ID
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @Model.LeaveBalanceId
-                        </dd>
-
-                        <dt class="col-sm-5">
-                            Employee
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @Model.Employee.FirstName
-                            @Model.Employee.LastName
-                        </dd>
-
-                        <dt class="col-sm-5">
-                            Employee Code
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @Model.Employee.EmployeeCode
-                        </dd>
-
-                        <dt class="col-sm-5">
-                            Leave Type
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @Model.LeaveType.Name
-                        </dd>
-
-                        <dt class="col-sm-5">
-                            Allocation
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @Model.LeaveType.AllocationType -
-                            @Model.LeaveType.AllocationLimit.ToString("0.##")
-                            @(Model.LeaveType.AllocationType == "Monthly" ? "per month" : "per year")
-                        </dd>
-
-                        <dt class="col-sm-5">
-                            Available Leaves
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            <strong>
-                                @Model.AvailableLeaves.ToString("0.##")
-                            </strong>
-                        </dd>
-                    </dl>
-                </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Allocated</div><div class="h3 mb-0">@Model.TotalAllocated.ToString("0.##")</div></div></div></div>
+        <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Available</div><div class="h3 mb-0">@Model.TotalAvailable.ToString("0.##")</div></div></div></div>
+        <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Allocated − Available</div><div class="h3 mb-0">@Math.Max(0, Model.TotalAllocated - Model.TotalAvailable).ToString("0.##")</div></div></div></div>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-header"><strong>Breakdown by Leave Type</strong></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th>Leave Type</th><th>Allocation Period</th><th>Allocated per Period</th><th>Used*</th><th>Available</th><th>Status</th></tr></thead>
+                    <tbody>
+                    @foreach (var leave in Model.LeaveTypes)
+                    {
+                        <tr>
+                            <td><strong>@leave.Name</strong></td><td>@leave.AllocationType</td><td>@leave.Allocated.ToString("0.##")</td><td>@leave.Used.ToString("0.##")</td><td><strong>@leave.Available.ToString("0.##")</strong></td>
+                            <td>@if (leave.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
             </div>
+            <p class="text-muted small p-3 mb-0">*Used is estimated as allocation per period minus current available balance; for monthly leave types, automatic renewals can make this estimate differ from lifetime approved leave used.</p>
         </div>
     </div>
 </div>

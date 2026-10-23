@@ -2,7 +2,6 @@
     ViewData["Title"] = "Dashboard";
 
     var username = ViewBag.Username as string ?? "User";
-    var employeeId = ViewBag.EmployeeId as string;
     var isManagementView = ViewBag.IsManagementView is bool managementFlag && managementFlag;
 }
 
@@ -14,18 +13,6 @@
             Welcome, @username
         </h1>
 
-        @if (!string.IsNullOrEmpty(employeeId))
-        {
-            <p class="text-muted mb-0">
-                Employee ID: @employeeId
-            </p>
-        }
-        else
-        {
-            <p class="text-muted mb-0">
-                You are logged in as an administrator.
-            </p>
-        }
     </div>
 
     @if (isManagementView)

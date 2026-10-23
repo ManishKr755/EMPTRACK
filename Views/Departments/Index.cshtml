@@ -13,9 +13,12 @@
             </p>
         </div>
 
-        <a asp-action="Create" class="btn btn-primary">
-            + Add Department
-        </a>
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-action="Create" class="btn btn-primary">
+                + Add Department
+            </a>
+        }
     </div>
 
     @if (TempData["SuccessMessage"] != null)

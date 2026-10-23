@@ -22,10 +22,13 @@
             </p>
         </div>
 
-        <a asp-action="Create"
-           class="btn btn-primary">
-            + New Concern
-        </a>
+        @if (!User.IsInRole("Admin"))
+        {
+            <a asp-action="Create"
+               class="btn btn-primary">
+                + New Concern
+            </a>
+        }
     </div>
 
     @if (TempData["SuccessMessage"] != null)

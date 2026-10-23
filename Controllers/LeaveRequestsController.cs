@@ -15,6 +15,7 @@ namespace EMPTRACK.Controllers;
 public class LeaveRequestsController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly LeaveBalanceService _leaveBalanceService;
 
     private static readonly string[] RequestViewerRoles =
     {
@@ -25,9 +26,10 @@ public class LeaveRequestsController : Controller
         "Manager"
     };
 
-    public LeaveRequestsController(ApplicationDbContext context)
+    public LeaveRequestsController(ApplicationDbContext context, LeaveBalanceService leaveBalanceService)
     {
         _context = context;
+        _leaveBalanceService = leaveBalanceService;
     }
 
     // GET: /LeaveRequests
@@ -308,6 +310,10 @@ public class LeaveRequestsController : Controller
 
         try
         {
+            // Ensure a balance exists and current monthly/annual accruals are applied
+            // before the stored procedure checks and deducts the requested days.
+            await _leaveBalanceService.EnsureAndAccrueAsync();
+
             // The stored procedure performs the complete approval
             // transaction, including the balance deduction.
             await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -747,6 +753,7 @@ public class LeaveRequestsController : Controller
         int employeeId,
         int? selectedLeaveTypeId = null)
     {
+        await _leaveBalanceService.EnsureAndAccrueAsync();
         var leaveTypes = await _context.LeaveTypes
             .AsNoTracking()
             .Where(lt => lt.IsActive)

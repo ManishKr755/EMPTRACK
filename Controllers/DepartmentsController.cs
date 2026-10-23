@@ -73,7 +73,9 @@ public class DepartmentsController : Controller
         return View(department);
     }
 
+    // Department creation is restricted to Admin only.
     // GET: /Departments/Create
+    [Authorize(Roles = "Admin")]
     [HttpGet]
     public IActionResult Create()
     {
@@ -83,6 +85,7 @@ public class DepartmentsController : Controller
     }
 
     // POST: /Departments/Create
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(DepartmentCreateViewModel model)
@@ -150,6 +153,9 @@ public class DepartmentsController : Controller
         if (department == null)
             return NotFound();
 
+        if (!await CanEditDepartmentAsync(department))
+            return Forbid();
+
         var model = new DepartmentEditViewModel
         {
             Code = department.Code,
@@ -175,6 +181,9 @@ public class DepartmentsController : Controller
 
         if (department == null)
             return NotFound();
+
+        if (!await CanEditDepartmentAsync(department))
+            return Forbid();
 
         model.Code = model.Code?.Trim() ?? string.Empty;
         model.Name = model.Name?.Trim() ?? string.Empty;
@@ -331,6 +340,38 @@ public class DepartmentsController : Controller
                 }
             }
         }
+    }
+
+
+    private async Task<bool> CanEditDepartmentAsync(Department department)
+    {
+        // Admin can manage department details. HR Head and Head Manager are
+        // limited to the department they lead, with HR Head restricted to HR.
+        if (User.IsInRole("Admin"))
+            return true;
+
+        var employeeIdValue = User.FindFirst("EmployeeId")?.Value;
+        if (!int.TryParse(employeeIdValue, out var employeeId))
+            return false;
+
+        var employee = await _context.Employees
+            .AsNoTracking()
+            .SingleOrDefaultAsync(e => e.EmployeeId == employeeId);
+
+        if (employee == null)
+            return false;
+
+        if (User.IsInRole("HR Head"))
+            return IsHRDepartment(department.Code) &&
+                   employee.Role == "HR Head" &&
+                   employee.DepartmentId == department.DepartmentId;
+
+        if (User.IsInRole("Head Manager"))
+            return !IsHRDepartment(department.Code) &&
+                   employee.Role == "Head Manager" &&
+                   employee.DepartmentId == department.DepartmentId;
+
+        return false;
     }
 
     private void ValidateCodeFormat(string code)

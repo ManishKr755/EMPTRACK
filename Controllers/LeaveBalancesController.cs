@@ -1,6 +1,7 @@
-﻿using EMPTRACK.Data;
+using EMPTRACK.Data;
 using EMPTRACK.Models;
 using EMPTRACK.Models.ViewModels;
+using EMPTRACK.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -13,69 +14,112 @@ namespace EMPTRACK.Controllers;
 public class LeaveBalancesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly LeaveBalanceService _leaveBalanceService;
 
-    public LeaveBalancesController(ApplicationDbContext context)
+    public LeaveBalancesController(ApplicationDbContext context, LeaveBalanceService leaveBalanceService)
     {
         _context = context;
+        _leaveBalanceService = leaveBalanceService;
     }
 
-    // GET: /LeaveBalances
+    // GET: /LeaveBalances - one row per employee with aggregated balances.
     [Authorize(Roles = "Admin,HR Head,HR")]
     [HttpGet]
     public async Task<IActionResult> Index(int? employeeId, int? leaveTypeId)
     {
-        var query = _context.LeaveBalances
-            .Include(lb => lb.Employee)
-            .Include(lb => lb.LeaveType)
+        await _leaveBalanceService.EnsureAndAccrueAsync();
+
+        var employeesQuery = _context.Employees.AsNoTracking().AsQueryable();
+        if (employeeId.HasValue)
+            employeesQuery = employeesQuery.Where(e => e.EmployeeId == employeeId.Value);
+
+        var employees = await employeesQuery
+            .OrderBy(e => e.EmployeeCode)
+            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FirstName, e.LastName })
+            .ToListAsync();
+
+        var balancesQuery = _context.LeaveBalances
+            .Include(b => b.LeaveType)
             .AsNoTracking()
             .AsQueryable();
-
         if (employeeId.HasValue)
-        {
-            query = query.Where(lb => lb.EmployeeId == employeeId.Value);
-        }
-
+            balancesQuery = balancesQuery.Where(b => b.EmployeeId == employeeId.Value);
         if (leaveTypeId.HasValue)
+            balancesQuery = balancesQuery.Where(b => b.LeaveTypeId == leaveTypeId.Value);
+
+        var balances = await balancesQuery.ToListAsync();
+        var balanceGroups = balances.GroupBy(b => b.EmployeeId)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Allocated = g.Sum(b => b.LeaveType.AllocationLimit),
+                Available = g.Sum(b => b.AvailableLeaves)
+            });
+
+        // Include employees even when they currently have no balance records.
+        var rows = employees.Select(e =>
         {
-            query = query.Where(lb => lb.LeaveTypeId == leaveTypeId.Value);
-        }
+            balanceGroups.TryGetValue(e.EmployeeId, out var totals);
+            return new EmployeeLeaveBalanceSummaryViewModel
+            {
+                EmployeeId = e.EmployeeId,
+                EmployeeCode = e.EmployeeCode,
+                EmployeeName = $"{e.FirstName} {e.LastName}",
+                TotalAllocated = totals?.Allocated ?? 0,
+                TotalAvailable = totals?.Available ?? 0
+            };
+        }).ToList();
 
         ViewData["EmployeeId"] = employeeId;
         ViewData["LeaveTypeId"] = leaveTypeId;
-
         await PopulateEmployeeFilterAsync(employeeId);
         await PopulateLeaveTypeFilterAsync(leaveTypeId);
-
-        var balances = await query
-            .OrderBy(lb => lb.Employee.EmployeeCode)
-            .ThenBy(lb => lb.LeaveType.Name)
-            .ToListAsync();
-
-        return View(balances);
+        return View(rows);
     }
 
-    // GET: /LeaveBalances/Details/5
+    // GET: /LeaveBalances/Details/5 - all leave types for the selected employee.
     [Authorize(Roles = "Admin,HR Head,HR")]
     [HttpGet]
     public async Task<IActionResult> Details(int? id)
     {
-        if (!id.HasValue)
+        if (!id.HasValue) return NotFound();
+
+        await _leaveBalanceService.EnsureAndAccrueAsync();
+        var employee = await _context.Employees.AsNoTracking()
+            .SingleOrDefaultAsync(e => e.EmployeeId == id.Value);
+        if (employee == null) return NotFound();
+
+        var leaveTypes = await _context.LeaveTypes.AsNoTracking()
+            .OrderBy(t => t.Name).ToListAsync();
+        var balances = await _context.LeaveBalances.AsNoTracking()
+            .Where(b => b.EmployeeId == id.Value).ToListAsync();
+        var balanceByType = balances.ToDictionary(b => b.LeaveTypeId);
+
+        var rows = leaveTypes.Select(type =>
         {
-            return NotFound();
-        }
+            balanceByType.TryGetValue(type.LeaveTypeId, out var balance);
+            var allocated = type.AllocationLimit;
+            var available = balance?.AvailableLeaves ?? 0;
+            return new LeaveTypeBalanceRowViewModel
+            {
+                LeaveTypeId = type.LeaveTypeId,
+                Name = type.Name,
+                AllocationType = type.AllocationType,
+                Allocated = allocated,
+                Available = available,
+                Used = Math.Max(0, allocated - available),
+                IsActive = type.IsActive
+            };
+        }).ToList();
 
-        var balance = await _context.LeaveBalances
-            .Include(lb => lb.Employee)
-            .Include(lb => lb.LeaveType)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(lb => lb.LeaveBalanceId == id.Value);
-
-        if (balance == null)
+        return View(new EmployeeLeaveBalanceDetailViewModel
         {
-            return NotFound();
-        }
-
-        return View(balance);
+            EmployeeId = employee.EmployeeId,
+            EmployeeCode = employee.EmployeeCode,
+            EmployeeName = $"{employee.FirstName} {employee.LastName}",
+            TotalAllocated = rows.Sum(r => r.Allocated),
+            TotalAvailable = rows.Sum(r => r.Available),
+            LeaveTypes = rows
+        });
     }
 
     // GET: /LeaveBalances/Create

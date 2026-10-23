@@ -1,4 +1,4 @@
-﻿using EMPTRACK.Models;
+using EMPTRACK.Models;
 using Microsoft.EntityFrameworkCore;
 using TaskEntity = EMPTRACK.Models.Task;
 
@@ -311,6 +311,9 @@ public class ApplicationDbContext : DbContext
 
             entity.Property(e => e.AvailableLeaves)
                 .IsRequired();
+
+            entity.Property(e => e.LastAccruedPeriod)
+                .IsRequired(false);
 
             entity.HasIndex(e => new
             {
