@@ -13,14 +13,14 @@
     <div class="row g-3 mb-4">
         <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Allocated</div><div class="h3 mb-0">@Model.TotalAllocated.ToString("0.##")</div></div></div></div>
         <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Available</div><div class="h3 mb-0">@Model.TotalAvailable.ToString("0.##")</div></div></div></div>
-        <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Allocated − Available</div><div class="h3 mb-0">@Math.Max(0, Model.TotalAllocated - Model.TotalAvailable).ToString("0.##")</div></div></div></div>
+        <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Used</div><div class="h3 mb-0">@Math.Max(0, Model.TotalAllocated - Model.TotalAvailable).ToString("0.##")</div></div></div></div>
     </div>
     <div class="card shadow-sm">
         <div class="card-header"><strong>Breakdown by Leave Type</strong></div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light"><tr><th>Leave Type</th><th>Allocation Period</th><th>Allocated per Period</th><th>Used*</th><th>Available</th><th>Status</th></tr></thead>
+                    <thead class="table-light"><tr><th>Leave Type</th><th>Allocation Period</th><th>Allocated per Period</th><th>Used</th><th>Available</th><th>Status</th></tr></thead>
                     <tbody>
                     @foreach (var leave in Model.LeaveTypes)
                     {
@@ -32,7 +32,6 @@
                     </tbody>
                 </table>
             </div>
-            <p class="text-muted small p-3 mb-0">*Used is estimated as allocation per period minus current available balance; for monthly leave types, automatic renewals can make this estimate differ from lifetime approved leave used.</p>
         </div>
     </div>
 </div>
