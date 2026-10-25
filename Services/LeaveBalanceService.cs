@@ -34,6 +34,10 @@ public sealed class LeaveBalanceService
         if (activeEmployees.Count == 0 || activeTypes.Count == 0)
             return;
 
+        var ownsTransaction = _context.Database.CurrentTransaction == null;
+        await using var transaction = ownsTransaction
+            ? await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken)
+            : null;
         var employeeIds = activeEmployees.ToHashSet();
         var typeIds = activeTypes.Select(t => t.LeaveTypeId).ToHashSet();
         var balances = await _context.LeaveBalances
@@ -85,6 +89,8 @@ public sealed class LeaveBalanceService
 
         if (changed)
             await _context.SaveChangesAsync(cancellationToken);
+        if (transaction != null)
+            await transaction.CommitAsync(cancellationToken);
     }
 
     public static DateOnly GetCurrentPeriodStart(string allocationType, DateOnly today) =>

@@ -50,26 +50,35 @@
 
         </div>
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-header"><strong>Personal Information</strong></div>
-            <div class="card-body"><div class="row">
-                <div class="col-md-6 mb-3"><label asp-for="FirstName" class="form-label"></label><input asp-for="FirstName" class="form-control" /><span asp-validation-for="FirstName" class="text-danger"></span></div>
-                <div class="col-md-6 mb-3"><label asp-for="LastName" class="form-label"></label><input asp-for="LastName" class="form-control" /><span asp-validation-for="LastName" class="text-danger"></span></div>
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><strong>Personal Information</strong></div>
+                <div class="card-body"><div class="row">
+                    <div class="col-md-6 mb-3"><label asp-for="FirstName" class="form-label"></label><input asp-for="FirstName" class="form-control" /><span asp-validation-for="FirstName" class="text-danger"></span></div>
+                    <div class="col-md-6 mb-3"><label asp-for="LastName" class="form-label"></label><input asp-for="LastName" class="form-control" /><span asp-validation-for="LastName" class="text-danger"></span></div>
+                    <div class="col-md-6 mb-3"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" type="email" /><span asp-validation-for="Email" class="text-danger"></span></div>
+                    <div class="col-md-6 mb-3"><label asp-for="Phone" class="form-label"></label><input asp-for="Phone" class="form-control" type="tel" /><span asp-validation-for="Phone" class="text-danger"></span></div>
+                </div></div>
+            </div>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><strong>Employment Information</strong></div>
+                <div class="card-body"><div class="row">
+                    <div class="col-md-6 mb-3"><label asp-for="Role" class="form-label"></label><select asp-for="Role" class="form-select"><option value="">-- Select Role --</option>@foreach (var role in roles) { <option value="@role">@role</option> }</select><span asp-validation-for="Role" class="text-danger"></span></div>
+                    <div class="col-md-6 mb-3"><label asp-for="EmploymentStatus" class="form-label"></label><select asp-for="EmploymentStatus" class="form-select">@foreach (var status in statuses) { <option value="@status">@status</option> }</select><span asp-validation-for="EmploymentStatus" class="text-danger"></span></div>
+                    <div class="col-md-6 mb-3"><label asp-for="DepartmentId" class="form-label"></label><select asp-for="DepartmentId" class="form-select" id="DepartmentId"><option value="">-- Select Department --</option>@foreach (var department in departments) { <option value="@department.DepartmentId">@department.Name</option> }</select><span asp-validation-for="DepartmentId" class="text-danger"></span></div>
+                    <div class="col-md-6 mb-3"><label asp-for="TeamId" class="form-label"></label><select asp-for="TeamId" class="form-select" id="TeamId"><option value="">-- No Team --</option>@foreach (var team in teams) { <option value="@team.TeamId" data-department="@team.DepartmentId">@team.Name</option> }</select><span asp-validation-for="TeamId" class="text-danger"></span></div>
+                    <div class="col-md-6 mb-3"><label asp-for="JoiningDate" class="form-label"></label><input asp-for="JoiningDate" class="form-control" type="date" /><span asp-validation-for="JoiningDate" class="text-danger"></span></div>
+                </div></div>
+            </div>
+        }
+        else
+        {
+            <div class="card shadow-sm mb-4"><div class="card-header"><strong>Contact Information</strong></div><div class="card-body"><div class="row">
                 <div class="col-md-6 mb-3"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" type="email" /><span asp-validation-for="Email" class="text-danger"></span></div>
                 <div class="col-md-6 mb-3"><label asp-for="Phone" class="form-label"></label><input asp-for="Phone" class="form-control" type="tel" /><span asp-validation-for="Phone" class="text-danger"></span></div>
-            </div></div>
-        </div>
-
-        <div class="card shadow-sm mb-4">
-            <div class="card-header"><strong>Employment Information</strong></div>
-            <div class="card-body"><div class="row">
-                <div class="col-md-6 mb-3"><label asp-for="Role" class="form-label"></label><select asp-for="Role" class="form-select"><option value="">-- Select Role --</option>@foreach (var role in roles) { <option value="@role">@role</option> }</select><span asp-validation-for="Role" class="text-danger"></span></div>
-                <div class="col-md-6 mb-3"><label asp-for="EmploymentStatus" class="form-label"></label><select asp-for="EmploymentStatus" class="form-select">@foreach (var status in statuses) { <option value="@status">@status</option> }</select><span asp-validation-for="EmploymentStatus" class="text-danger"></span></div>
-                <div class="col-md-6 mb-3"><label asp-for="DepartmentId" class="form-label"></label><select asp-for="DepartmentId" class="form-select" id="DepartmentId"><option value="">-- Select Department --</option>@foreach (var department in departments) { <option value="@department.DepartmentId">@department.Name</option> }</select><span asp-validation-for="DepartmentId" class="text-danger"></span></div>
-                <div class="col-md-6 mb-3"><label asp-for="TeamId" class="form-label"></label><select asp-for="TeamId" class="form-select" id="TeamId"><option value="">-- No Team --</option>@foreach (var team in teams) { <option value="@team.TeamId" data-department="@team.DepartmentId">@team.Name</option> }</select><span asp-validation-for="TeamId" class="text-danger"></span></div>
-                <div class="col-md-6 mb-3"><label asp-for="JoiningDate" class="form-label"></label><input asp-for="JoiningDate" class="form-control" type="date" /><span asp-validation-for="JoiningDate" class="text-danger"></span></div>
-            </div></div>
-        </div>
+            </div></div></div>
+        }
 
         @if (canManagePassword)
         {
@@ -79,17 +88,6 @@
                     @if (!string.IsNullOrWhiteSpace(Model.Username))
                     {
                         <div class="mb-3"><label class="form-label">Username</label><input class="form-control" value="@Model.Username" readonly /></div>
-                    }
-                    @if (Model.CurrentPassword != null)
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">Current Password</label>
-                            <div class="input-group"><input id="currentEmployeePassword" class="form-control" value="@Model.CurrentPassword" type="password" readonly disabled /><button class="btn btn-outline-secondary" type="button" data-toggle-password="currentEmployeePassword" aria-label="Show current password">👁</button></div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="alert alert-warning">No decryptable password is available for this account. Set a new password below if needed.</div>
                     }
                     <div class="row">
                         <div class="col-md-6 mb-3"><label asp-for="NewPassword" class="form-label"></label><input asp-for="NewPassword" class="form-control" type="password" autocomplete="new-password" /><div class="form-text">Leave both new-password fields empty to keep the current password.</div><span asp-validation-for="NewPassword" class="text-danger"></span></div>
@@ -112,17 +110,15 @@
             if (department && team) {
                 function filterTeams() {
                     const value = department.value;
-                    Array.from(team.options).forEach(option => { if (!option.value) { option.hidden = false; return; } option.hidden = value !== "" && option.dataset.department !== value; });
+                    Array.from(team.options).forEach(option => {
+                        if (!option.value) { option.hidden = false; return; }
+                        option.hidden = value !== "" && option.dataset.department !== value;
+                    });
                     if (team.selectedOptions[0]?.hidden) team.value = "";
                 }
-                department.addEventListener("change", filterTeams); filterTeams();
+                department.addEventListener("change", filterTeams);
+                filterTeams();
             }
-            document.querySelectorAll("[data-toggle-password]").forEach(button => {
-                button.addEventListener("click", function () {
-                    const input = document.getElementById(button.dataset.togglePassword);
-                    input.type = input.type === "password" ? "text" : "password";
-                });
-            });
         });
     </script>
 }

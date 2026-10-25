@@ -332,69 +332,17 @@ public class SalaryPaymentsController : Controller
 
     // GET: /SalaryPayments/Delete/5
     [HttpGet]
-    public async Task<IActionResult> Delete(int? id)
+    public IActionResult Delete(int? id)
     {
-        if (!IsSalaryAdministrator())
-        {
-            return Forbid();
-        }
-
-        if (!id.HasValue)
-        {
-            return NotFound();
-        }
-
-        var payment = await _context.SalaryPayments
-            .Include(p => p.Employee)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(p =>
-                p.PaymentId == id.Value);
-
-        if (payment == null)
-        {
-            return NotFound();
-        }
-
-        return View(payment);
+        return Forbid();
     }
 
     // POST: /SalaryPayments/Delete/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
+    public IActionResult DeleteConfirmed(int id)
     {
-        if (!IsSalaryAdministrator())
-        {
-            return Forbid();
-        }
-
-        var payment = await _context.SalaryPayments
-            .SingleOrDefaultAsync(p =>
-                p.PaymentId == id);
-
-        if (payment == null)
-        {
-            return NotFound();
-        }
-
-        _context.SalaryPayments.Remove(payment);
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            TempData["ErrorMessage"] =
-                "The salary payment could not be deleted.";
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        TempData["SuccessMessage"] =
-            "Salary payment deleted successfully.";
-
-        return RedirectToAction(nameof(Index));
+        return Forbid();
     }
 
     // ============================================================
@@ -403,9 +351,7 @@ public class SalaryPaymentsController : Controller
 
     private bool IsSalaryAdministrator()
     {
-        return User.IsInRole("Admin") ||
-               User.IsInRole("HR Head") ||
-               User.IsInRole("HR");
+        return User.IsInRole("Admin");
     }
 
     private async Task<UserAccount?> GetCurrentUserAccountAsync()

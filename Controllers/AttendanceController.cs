@@ -1,4 +1,4 @@
-﻿using EMPTRACK.Data;
+using EMPTRACK.Data;
 using EMPTRACK.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +35,22 @@ public class AttendanceController : Controller
             .Include(a => a.Employee)
             .AsNoTracking()
             .AsQueryable();
+
+        if (User.IsInRole("Manager") || User.IsInRole("Head Manager") || User.IsInRole("HR Head") || User.IsInRole("HR"))
+        {
+            var currentEmployeeId = GetCurrentEmployeeId();
+            var current = currentEmployeeId.HasValue ? await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentEmployeeId.Value) : null;
+            if (current == null) return Forbid();
+            if (current.Role == "Manager") query = current.TeamId.HasValue ? query.Where(a => a.Employee.TeamId == current.TeamId.Value) : query.Where(a => a.EmployeeId == current.EmployeeId);
+            else if (current.Role == "Head Manager") query = current.DepartmentId.HasValue ? query.Where(a => a.Employee.DepartmentId == current.DepartmentId.Value) : query.Where(a => a.EmployeeId == current.EmployeeId);
+            else if (current.Role == "HR Head")
+            {
+                var deptIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+                query = query.Where(a => a.Employee.DepartmentId.HasValue && deptIds.Contains(a.Employee.DepartmentId.Value));
+            }
+            else query = query.Where(a => a.EmployeeId == current.EmployeeId);
+            if (employeeId.HasValue) query = query.Where(a => a.EmployeeId == employeeId.Value);
+        }
 
         if (!isAdministrativeUser)
         {
@@ -76,17 +92,23 @@ public class AttendanceController : Controller
 
         if (isAdministrativeUser)
         {
-            ViewBag.EmployeeFilter = await _context.Employees
-                .AsNoTracking()
-                .OrderBy(e => e.FirstName)
-                .ThenBy(e => e.LastName)
-                .Select(e => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+            var filterEmployees = _context.Employees.AsNoTracking().AsQueryable();
+            if (!User.IsInRole("Admin"))
+            {
+                var currentId = GetCurrentEmployeeId();
+                var current = currentId.HasValue ? await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId.Value) : null;
+                if (current == null) return Forbid();
+                if (current.Role == "Manager") filterEmployees = current.TeamId.HasValue ? filterEmployees.Where(e => e.TeamId == current.TeamId.Value) : filterEmployees.Where(e => e.EmployeeId == current.EmployeeId);
+                else if (current.Role == "Head Manager") filterEmployees = current.DepartmentId.HasValue ? filterEmployees.Where(e => e.DepartmentId == current.DepartmentId.Value) : filterEmployees.Where(e => e.EmployeeId == current.EmployeeId);
+                else if (current.Role == "HR Head")
                 {
-                    Value = e.EmployeeId.ToString(),
-                    Text = e.EmployeeCode + " - " + e.FirstName + " " + e.LastName,
-                    Selected = employeeId.HasValue && e.EmployeeId == employeeId.Value
-                })
-                .ToListAsync();
+                    var deptIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+                    filterEmployees = filterEmployees.Where(e => e.DepartmentId.HasValue && deptIds.Contains(e.DepartmentId.Value));
+                }
+                else filterEmployees = filterEmployees.Where(e => e.EmployeeId == current.EmployeeId);
+            }
+            ViewBag.EmployeeFilter = await filterEmployees.OrderBy(e => e.FirstName).ThenBy(e => e.LastName)
+                .Select(e => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem { Value = e.EmployeeId.ToString(), Text = e.EmployeeCode + " - " + e.FirstName + " " + e.LastName, Selected = employeeId.HasValue && e.EmployeeId == employeeId.Value }).ToListAsync();
         }
 
         ViewData["Search"] = search;
@@ -108,6 +130,7 @@ public class AttendanceController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CheckIn()
     {
+        if (User.IsInRole("Admin")) return Forbid();
         var employeeId = GetCurrentEmployeeId();
 
         if (!employeeId.HasValue)
@@ -124,9 +147,9 @@ public class AttendanceController : Controller
             return Forbid();
         }
 
-        if (string.Equals(
+        if (!string.Equals(
                 employee.EmploymentStatus,
-                "Inactive",
+                "Active",
                 StringComparison.OrdinalIgnoreCase))
         {
             TempData["ErrorMessage"] =
@@ -185,6 +208,7 @@ public class AttendanceController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CheckOut()
     {
+        if (User.IsInRole("Admin")) return Forbid();
         var employeeId = GetCurrentEmployeeId();
 
         if (!employeeId.HasValue)
@@ -251,6 +275,19 @@ public class AttendanceController : Controller
                                     User.IsInRole("HR Head") ||
                                     User.IsInRole("Head Manager") ||
                                     User.IsInRole("Manager");
+        if (!User.IsInRole("Admin"))
+        {
+            var currentEmployeeId = GetCurrentEmployeeId();
+            var current = currentEmployeeId.HasValue ? await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentEmployeeId.Value) : null;
+            var target = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == attendance.EmployeeId);
+            var allowed = current != null && target != null && (current.EmployeeId == target.EmployeeId ||
+                (current.Role == "Manager" && current.TeamId.HasValue && current.TeamId == target.TeamId) ||
+                (current.Role == "Head Manager" && current.DepartmentId.HasValue && current.DepartmentId == target.DepartmentId));
+            if (!allowed && current != null && current.Role == "HR Head" && target != null && target.DepartmentId.HasValue)
+                allowed = await _context.Departments.AsNoTracking().AnyAsync(d => d.DepartmentId == target.DepartmentId.Value && d.HeadHREmployeeId == current.EmployeeId);
+            if (!allowed) return NotFound();
+        }
+
 
         if (!isAdministrativeUser)
         {

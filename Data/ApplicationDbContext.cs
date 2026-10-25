@@ -552,6 +552,16 @@ public class ApplicationDbContext : DbContext
 
             entity.Property(e => e.PublishedAt)
                 .IsRequired();
+
+            entity.Property(e => e.AudienceType)
+                .IsRequired()
+                .HasMaxLength(30)
+                .HasDefaultValue("AllExceptAdmin");
+
+            entity.HasOne(e => e.Department)
+                .WithMany()
+                .HasForeignKey(e => e.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ============================================================
@@ -572,6 +582,8 @@ public class ApplicationDbContext : DbContext
 
             entity.Property(e => e.Date)
                 .IsRequired();
+
+            entity.HasIndex(e => e.Date).IsUnique();
         });
 
         // ============================================================

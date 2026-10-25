@@ -1,9 +1,9 @@
 @model EMPTRACK.Models.ViewModels.EmployeeDetailsViewModel
-@{ ViewData["Title"] = "Employee Details"; var isAdmin = User.IsInRole("Admin"); }
+@{ ViewData["Title"] = "Employee Details"; var isAdmin = User.IsInRole("Admin"); var currentEmployeeId = int.TryParse(User.FindFirst("EmployeeId")?.Value, out var parsedEmployeeId) ? parsedEmployeeId : (int?)null; var canEdit = isAdmin || ((User.IsInRole("HR") || User.IsInRole("Employee")) && currentEmployeeId == Model.EmployeeId); }
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div><h1>Employee Details</h1><p class="text-muted">View employee information.</p></div>
-        <div><a asp-action="Edit" asp-route-id="@Model.EmployeeId" class="btn btn-primary">Edit</a><a asp-action="Index" class="btn btn-secondary ms-2">Back to Employees</a></div>
+        <div>@if (canEdit) { <a asp-action="Edit" asp-route-id="@Model.EmployeeId" class="btn btn-primary">Edit</a> }<a asp-action="Index" class="btn btn-secondary ms-2">Back to Employees</a></div>
     </div>
     @if (TempData["SuccessMessage"] != null) { <div class="alert alert-success">@TempData["SuccessMessage"]</div> }
     <div class="card shadow-sm"><div class="card-body"><dl class="row">
@@ -22,12 +22,8 @@
         @if (isAdmin)
         {
             <dt class="col-sm-3">Username</dt><dd class="col-sm-9">@(Model.Username ?? "-")</dd>
-            <dt class="col-sm-3">Password</dt><dd class="col-sm-9">
-                @if (Model.Password != null) { <div class="input-group" style="max-width:420px"><input id="employeeDetailsPassword" class="form-control" value="@Model.Password" type="password" readonly disabled /><button class="btn btn-outline-secondary" type="button" data-toggle-password="employeeDetailsPassword" aria-label="Show password">👁</button></div> } else { <span class="text-muted">Not available; set a new password in Edit.</span> }
-            </dd>
+
         }
     </dl></div></div>
 </div>
-@section Scripts {
-<script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("[data-toggle-password]").forEach(function(b){b.addEventListener("click",function(){const i=document.getElementById(b.dataset.togglePassword);i.type=i.type==="password"?"text":"password";});});});</script>
-}
+

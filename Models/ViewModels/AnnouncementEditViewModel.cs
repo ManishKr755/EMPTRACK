@@ -13,4 +13,10 @@ public class AnnouncementEditViewModel
     [Required(ErrorMessage = "Content is required.")]
     [StringLength(2000)]
     public string Content { get; set; } = string.Empty;
+
+    [Required]
+    [RegularExpression("^(AllExceptAdmin|Department)$")]
+    public string AudienceType { get; set; } = "AllExceptAdmin";
+
+    public int? DepartmentId { get; set; }
 }

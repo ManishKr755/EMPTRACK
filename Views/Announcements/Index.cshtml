@@ -13,7 +13,7 @@
             </p>
         </div>
 
-        @if (User.IsInRole("Admin") || User.IsInRole("HR") || User.IsInRole("HR Head"))
+        @if (User.IsInRole("Admin"))
         {
             <a asp-action="Create" class="btn btn-primary">+ New Announcement</a>
         }
@@ -95,7 +95,7 @@
                                             Details
                                         </a>
 
-                                        @if (User.IsInRole("Admin") || User.IsInRole("HR") || User.IsInRole("HR Head"))
+                                        @if (User.IsInRole("Admin"))
                                         {
                                             <a asp-action="Edit" asp-route-id="@announcement.AnnouncementId" class="btn btn-sm btn-outline-primary">Edit</a>
                                             <a asp-action="Delete" asp-route-id="@announcement.AnnouncementId" class="btn btn-sm btn-outline-danger">Delete</a>

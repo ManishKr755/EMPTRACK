@@ -56,10 +56,11 @@ public class AccountController : Controller
             .Include(u => u.Employee)
             .SingleOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
 
-        var employeeIsActive = userAccount?.Employee == null ||
-                               userAccount.Employee.EmploymentStatus.Equals("Active", StringComparison.OrdinalIgnoreCase);
+        var isAdminAccount = string.Equals(userAccount?.Username, "admin", StringComparison.OrdinalIgnoreCase);
+        var employeeIsActive = userAccount?.Employee != null &&
+                               string.Equals(userAccount.Employee.EmploymentStatus, "Active", StringComparison.OrdinalIgnoreCase);
 
-        if (userAccount == null || !userAccount.IsActive || !employeeIsActive)
+        if (userAccount == null || !userAccount.IsActive || (!isAdminAccount && !employeeIsActive))
         {
             ModelState.AddModelError(string.Empty, "Invalid username or password.");
             ViewData["ReturnUrl"] = returnUrl;
@@ -88,7 +89,7 @@ public class AccountController : Controller
 
         claims.Add(new Claim(ClaimTypes.Role, applicationRole));
 
-        if (userAccount.EmployeeId.HasValue)
+        if (!isAdminAccount && userAccount.EmployeeId.HasValue)
             claims.Add(new Claim("EmployeeId", userAccount.EmployeeId.Value.ToString()));
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

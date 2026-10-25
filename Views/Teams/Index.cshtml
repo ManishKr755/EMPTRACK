@@ -13,10 +13,10 @@
             </p>
         </div>
 
-        <a asp-action="Create"
-           class="btn btn-primary">
-            + Add Team
-        </a>
+        @if (User.IsInRole("HR Head") || User.IsInRole("Head Manager"))
+        {
+            <a asp-action="Create" class="btn btn-primary">+ Add Team</a>
+        }
     </div>
 
     @if (TempData["SuccessMessage"] != null)

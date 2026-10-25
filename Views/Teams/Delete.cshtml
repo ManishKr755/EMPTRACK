@@ -1,0 +1,12 @@
+@model EMPTRACK.Models.Team
+@{ ViewData["Title"] = "Delete Team"; }
+<div class="container-fluid">
+    <h1 class="h3">Delete Team</h1>
+    <p>Confirm deletion of <strong>@Model.Name</strong> in @Model.Department?.Name.</p>
+    <p class="text-warning">Deletion is blocked if employees or historical records reference this team.</p>
+    <form asp-action="DeleteConfirmed" asp-route-id="@Model.TeamId" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-danger">Delete Team</button>
+        <a asp-action="Details" asp-route-id="@Model.TeamId" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>

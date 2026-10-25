@@ -1,4 +1,4 @@
-﻿@model EMPTRACK.Models.Holiday
+@model EMPTRACK.Models.Holiday
 
 @{
     ViewData["Title"] = "Holiday Details";
@@ -19,7 +19,7 @@
         </div>
 
         <div class="d-flex gap-2">
-            @if (User.IsInRole("Admin") || User.IsInRole("HR Head") || User.IsInRole("HR"))
+            @if (User.IsInRole("Admin"))
             {
                 <a asp-action="Edit"
                    asp-route-id="@Model.HolidayId"

@@ -3,6 +3,8 @@ using EMPTRACK.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
 using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,9 +37,56 @@ builder.Services.AddAuthentication(
     .AddCookie(options =>
     {
         options.LoginPath = "/Account/Login";
+        // Enforce the agreed idle lifetime regardless of Remember Me.
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+        options.SlidingExpiration = true; // Renew only with activity: 30-minute idle timeout. Remember Me is not used to extend it.
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var idClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(idClaim, out var userAccountId))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+            var account = await db.UserAccounts
+                .AsNoTracking()
+                .Include(a => a.Employee)
+                .SingleOrDefaultAsync(a => a.UserAccountId == userAccountId);
+
+            var isAdminAccount = string.Equals(account?.Username, "admin", StringComparison.OrdinalIgnoreCase);
+            var employeeIsActive = account?.Employee != null &&
+                string.Equals(account.Employee.EmploymentStatus, "Active", StringComparison.OrdinalIgnoreCase);
+            if (account == null || !account.IsActive || (!isAdminAccount && !employeeIsActive))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            // Refresh role and employee claims from the database so role changes do not
+            // leave stale permissions in an otherwise valid session.
+            var role = isAdminAccount ? "Admin" : account.Employee!.Role;
+            var refreshedClaims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, account.UserAccountId.ToString()),
+                new(ClaimTypes.Name, account.Username),
+                new(ClaimTypes.Role, role)
+            };
+            if (!isAdminAccount && account.EmployeeId.HasValue)
+                refreshedClaims.Add(new Claim("EmployeeId", account.EmployeeId.Value.ToString()));
+            var refreshedIdentity = new ClaimsIdentity(refreshedClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+            context.ReplacePrincipal(new ClaimsPrincipal(refreshedIdentity));
+        };
     });
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Validate antiforgery tokens for all unsafe MVC requests by default.
+    options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
+});
 
 var app = builder.Build();
 

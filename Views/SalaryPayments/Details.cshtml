@@ -1,4 +1,4 @@
-﻿@model EMPTRACK.Models.SalaryPayment
+@model EMPTRACK.Models.SalaryPayment
 
 @{
     ViewData["Title"] = "Salary Payment Details";
@@ -24,12 +24,6 @@
                    asp-route-id="@Model.PaymentId"
                    class="btn btn-primary">
                     Edit
-                </a>
-
-                <a asp-action="Delete"
-                   asp-route-id="@Model.PaymentId"
-                   class="btn btn-outline-danger">
-                    Delete
                 </a>
             }
 

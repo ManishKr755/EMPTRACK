@@ -1,4 +1,4 @@
-﻿@model IEnumerable<EMPTRACK.Models.Task>
+@model IEnumerable<EMPTRACK.Models.Task>
 
 @{
     ViewData["Title"] = "Tasks";
@@ -13,11 +13,9 @@
             </p>
         </div>
 
-        @if (!User.IsInRole("Admin"))
+        @if (ViewBag.CanCreate == true)
         {
-            <a asp-action="Create" class="btn btn-primary">
-                + New Task
-            </a>
+            <a asp-action="Create" class="btn btn-primary">+ New Task</a>
         }
     </div>
 

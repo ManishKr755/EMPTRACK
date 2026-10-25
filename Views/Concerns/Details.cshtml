@@ -1,4 +1,4 @@
-﻿@model EMPTRACK.Models.ViewModels.ConcernDetailsViewModel
+@model EMPTRACK.Models.ViewModels.ConcernDetailsViewModel
 
 @{
     ViewData["Title"] = "Concern Details";
@@ -39,10 +39,15 @@
             </p>
         </div>
 
-        <a asp-action="Index"
-           class="btn btn-outline-secondary">
-            Back to Concerns
-        </a>
+        <div class="d-flex gap-2">
+            @if (int.TryParse(User.FindFirst("EmployeeId")?.Value, out var currentConcernEmployeeId) && currentConcernEmployeeId == Model.EmployeeId)
+            {
+                if (Model.Status != "Closed") { <a asp-action="Edit" asp-route-id="@Model.ConcernId" class="btn btn-outline-primary">Edit Concern</a> }
+                <a asp-action="Delete" asp-route-id="@Model.ConcernId" class="btn btn-outline-danger">Delete Concern</a>
+            }
+            @if (User.IsInRole("Admin")) { <a asp-action="Delete" asp-route-id="@Model.ConcernId" class="btn btn-outline-danger">Delete Concern</a> }
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to Concerns</a>
+        </div>
     </div>
 
     <div class="card shadow-sm mb-4">

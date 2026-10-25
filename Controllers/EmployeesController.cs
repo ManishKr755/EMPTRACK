@@ -10,7 +10,7 @@ using System.Security.Claims;
 
 namespace EMPTRACK.Controllers;
 
-[Authorize(Roles = "Admin,HR Head,HR,Head Manager,Manager")]
+[Authorize(Roles = "Admin,HR Head,HR,Head Manager,Manager,Employee")]
 public class EmployeesController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -48,6 +48,34 @@ public class EmployeesController : Controller
             .Include(e => e.Department)
             .Include(e => e.Team)
             .AsQueryable();
+
+        if (!User.IsInRole("Admin") && !User.IsInRole("HR Head") && !User.IsInRole("HR") && !User.IsInRole("Head Manager") && !User.IsInRole("Manager")) return Forbid();
+        if (User.IsInRole("Manager"))
+        {
+            var currentId = CurrentEmployeeId();
+            var teamId = currentId.HasValue ? await _context.Employees.AsNoTracking().Where(e => e.EmployeeId == currentId.Value).Select(e => e.TeamId).FirstOrDefaultAsync() : null;
+            query = teamId.HasValue ? query.Where(e => e.TeamId == teamId.Value) : query.Where(e => false);
+        }
+        else if (User.IsInRole("Head Manager"))
+        {
+            var currentId = CurrentEmployeeId();
+            var deptId = currentId.HasValue ? await _context.Employees.AsNoTracking().Where(e => e.EmployeeId == currentId.Value).Select(e => e.DepartmentId).FirstOrDefaultAsync() : null;
+            query = deptId.HasValue ? query.Where(e => e.DepartmentId == deptId.Value) : query.Where(e => false);
+        }
+        else if (User.IsInRole("HR Head"))
+        {
+            var currentId = CurrentEmployeeId();
+            if (!currentId.HasValue) return Forbid();
+            var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId.Value);
+            if (current == null) return Forbid();
+            var deptIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+            query = query.Where(e => e.DepartmentId.HasValue && deptIds.Contains(e.DepartmentId.Value));
+        }
+        else if (User.IsInRole("HR"))
+        {
+            var currentId = CurrentEmployeeId();
+            query = currentId.HasValue ? query.Where(e => e.EmployeeId == currentId.Value) : query.Where(e => false);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -97,6 +125,21 @@ public class EmployeesController : Controller
             })
             .ToListAsync();
 
+        var departmentOptions = _context.Departments.AsNoTracking().AsQueryable();
+        if (!User.IsInRole("Admin"))
+        {
+            var currentId = CurrentEmployeeId();
+            var current = currentId.HasValue ? await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId.Value) : null;
+            if (current == null) return Forbid();
+            if (current.Role == "HR Head")
+            {
+                var departmentIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+                departmentOptions = departmentOptions.Where(d => departmentIds.Contains(d.DepartmentId));
+            }
+            else if (current.DepartmentId.HasValue) departmentOptions = departmentOptions.Where(d => d.DepartmentId == current.DepartmentId.Value);
+            else departmentOptions = departmentOptions.Where(d => false);
+        }
+
         var viewModel = new EmployeeIndexViewModel
         {
             Search = search,
@@ -105,10 +148,7 @@ public class EmployeesController : Controller
             EmploymentStatus = employmentStatus,
             Employees = employees,
 
-            Departments = await _context.Departments
-                .AsNoTracking()
-                .OrderBy(d => d.Name)
-                .ToListAsync(),
+            Departments = await departmentOptions.OrderBy(d => d.Name).ToListAsync(),
 
             Roles = await _context.Employees
                 .AsNoTracking()
@@ -147,6 +187,7 @@ public class EmployeesController : Controller
 
         if (employee == null)
             return NotFound();
+        if (!await CanViewEmployeeAsync(employee)) return NotFound();
 
         var account = employee.UserAccounts.SingleOrDefault();
 
@@ -167,9 +208,7 @@ public class EmployeesController : Controller
             Username = User.IsInRole("Admin")
                 ? account?.Username
                 : null,
-            Password = User.IsInRole("Admin")
-                ? _passwordProtection.Unprotect(account?.EncryptedPassword)
-                : null
+            Password = null
         };
 
         return View(model);
@@ -180,7 +219,7 @@ public class EmployeesController : Controller
     // ============================================================
 
     [HttpGet]
-    [Authorize(Roles = "Admin,HR Head")]
+    [Authorize(Roles = "Admin,HR Head,Head Manager")]
     public async Task<IActionResult> Create()
     {
         var model = new EmployeeCreateViewModel
@@ -199,7 +238,7 @@ public class EmployeesController : Controller
     // ============================================================
 
     [HttpPost]
-    [Authorize(Roles = "Admin,HR Head")]
+    [Authorize(Roles = "Admin,HR Head,Head Manager")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(EmployeeCreateViewModel model)
     {
@@ -315,14 +354,16 @@ public class EmployeesController : Controller
         employee.UserAccounts.Add(account);
         _context.Employees.Add(employee);
 
+        await using var onboardingTransaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         try
         {
             await _context.SaveChangesAsync();
             await _leaveBalanceService.EnsureAndAccrueAsync();
-
+            await onboardingTransaction.CommitAsync();
         }
-        catch (DbUpdateException)
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException)
         {
+            await onboardingTransaction.RollbackAsync();
             ModelState.AddModelError(
                 string.Empty,
                 "The employee could not be saved. The EmployeeCode, Email, or username may already exist.");
@@ -355,6 +396,11 @@ public class EmployeesController : Controller
 
         if (employee == null)
             return NotFound();
+        if (!User.IsInRole("Admin"))
+        {
+            var currentId = CurrentEmployeeId();
+            if (!(User.IsInRole("HR") || User.IsInRole("Employee")) || currentId != employee.EmployeeId) return Forbid();
+        }
 
         var account = await _context.UserAccounts
             .AsNoTracking()
@@ -378,9 +424,7 @@ public class EmployeesController : Controller
             Username = User.IsInRole("Admin")
                 ? account?.Username
                 : null,
-            CurrentPassword = User.IsInRole("Admin")
-                ? _passwordProtection.Unprotect(account?.EncryptedPassword)
-                : null
+            CurrentPassword = null
         };
 
         await LoadEditFormDataAsync(model);
@@ -406,6 +450,22 @@ public class EmployeesController : Controller
 
         if (employee == null)
             return NotFound();
+
+        if (!User.IsInRole("Admin"))
+        {
+            var currentId = CurrentEmployeeId();
+            if (!(User.IsInRole("HR") || User.IsInRole("Employee")) || currentId != employee.EmployeeId) return Forbid();
+            // Ignore model-state entries for protected fields omitted by the self-service form.
+            foreach (var field in new[] { nameof(model.FirstName), nameof(model.LastName), nameof(model.Role), nameof(model.DepartmentId), nameof(model.TeamId), nameof(model.JoiningDate), nameof(model.EmploymentStatus), nameof(model.EmployeeCode), nameof(model.EmployeeSerial), nameof(model.Username), nameof(model.NewPassword), nameof(model.ConfirmNewPassword), nameof(model.CurrentPassword) }) ModelState.Remove(field);
+            if (!ModelState.IsValid) return View(model);
+            // Self-service is deliberately limited to contact fields. Ignore every protected posted field.
+            employee.Email = model.Email.Trim();
+            employee.Phone = string.IsNullOrWhiteSpace(model.Phone) ? null : model.Phone.Trim();
+            try { await _context.SaveChangesAsync(); }
+            catch (DbUpdateException) { ModelState.AddModelError(nameof(model.Email), "The email address is already in use."); return View(model); }
+            TempData["SuccessMessage"] = "Your contact details were updated.";
+            return RedirectToAction(nameof(Details), new { id = employee.EmployeeId });
+        }
 
         await ValidateEmployeeEditRulesAsync(model, employee);
 
@@ -469,9 +529,7 @@ public class EmployeesController : Controller
             model.Username = User.IsInRole("Admin")
                 ? account?.Username
                 : null;
-            model.CurrentPassword = User.IsInRole("Admin")
-                ? _passwordProtection.Unprotect(account?.EncryptedPassword)
-                : null;
+            model.CurrentPassword = null;
 
             await LoadEditFormDataAsync(model);
 
@@ -507,9 +565,7 @@ public class EmployeesController : Controller
                     nameof(model.FirstName),
                     "The generated username is already in use.");
 
-                model.CurrentPassword = User.IsInRole("Admin")
-                    ? _passwordProtection.Unprotect(account.EncryptedPassword)
-                    : null;
+                model.CurrentPassword = null;
 
                 await LoadEditFormDataAsync(model);
                 return View(model);
@@ -547,9 +603,7 @@ public class EmployeesController : Controller
             model.Username = User.IsInRole("Admin")
                 ? account?.Username
                 : null;
-            model.CurrentPassword = User.IsInRole("Admin")
-                ? _passwordProtection.Unprotect(account?.EncryptedPassword)
-                : null;
+            model.CurrentPassword = null;
 
             await LoadEditFormDataAsync(model);
 
@@ -568,20 +622,54 @@ public class EmployeesController : Controller
     // CREATE FORM DATA
     // ============================================================
 
+    private int? CurrentEmployeeId()
+    {
+        return int.TryParse(User.FindFirst("EmployeeId")?.Value, out var id) && id > 0 ? id : null;
+    }
+
+    private async Task<bool> CanViewEmployeeAsync(Employee employee)
+    {
+        if (User.IsInRole("Admin")) return true;
+        var currentId = CurrentEmployeeId();
+        if (!currentId.HasValue) return false;
+        if (User.IsInRole("HR") || User.IsInRole("Employee")) return currentId.Value == employee.EmployeeId;
+        var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId.Value);
+        if (current == null) return false;
+        if (current.Role == "Manager") return current.TeamId.HasValue && employee.TeamId == current.TeamId;
+        if (current.Role == "Head Manager") return current.DepartmentId.HasValue && employee.DepartmentId == current.DepartmentId;
+        if (current.Role == "HR Head")
+        {
+            if (current.DepartmentId == employee.DepartmentId) return true;
+            return employee.DepartmentId.HasValue && await _context.Departments.AsNoTracking().AnyAsync(d => d.DepartmentId == employee.DepartmentId.Value && d.HeadHREmployeeId == current.EmployeeId);
+        }
+        return false;
+    }
+
     private async System.Threading.Tasks.Task LoadCreateFormDataAsync(
         EmployeeCreateViewModel model)
     {
-        ViewBag.Departments = await _context.Departments
-            .AsNoTracking()
-            .OrderBy(d => d.Name)
-            .ToListAsync();
-
-        ViewBag.Teams = await _context.Teams
-            .AsNoTracking()
-            .OrderBy(t => t.Name)
-            .ToListAsync();
-
-        ViewBag.Roles = GetEmployeeRoles(User.IsInRole("Admin"));
+        var departmentsQuery = _context.Departments.AsNoTracking().AsQueryable();
+        var teamsQuery = _context.Teams.AsNoTracking().AsQueryable();
+        if (!User.IsInRole("Admin"))
+        {
+            var currentId = CurrentEmployeeId();
+            var current = currentId.HasValue ? await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId.Value) : null;
+            if (current == null) return;
+            if (User.IsInRole("HR Head"))
+            {
+                var departmentIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+                departmentsQuery = departmentsQuery.Where(d => departmentIds.Contains(d.DepartmentId));
+                teamsQuery = teamsQuery.Where(t => departmentIds.Contains(t.DepartmentId));
+            }
+            else
+            {
+                departmentsQuery = current.DepartmentId.HasValue ? departmentsQuery.Where(d => d.DepartmentId == current.DepartmentId.Value) : departmentsQuery.Where(d => false);
+                teamsQuery = current.DepartmentId.HasValue ? teamsQuery.Where(t => t.DepartmentId == current.DepartmentId.Value) : teamsQuery.Where(t => false);
+            }
+        }
+        ViewBag.Departments = await departmentsQuery.OrderBy(d => d.Name).ToListAsync();
+        ViewBag.Teams = await teamsQuery.OrderBy(t => t.Name).ToListAsync();
+        ViewBag.Roles = User.IsInRole("Admin") ? GetEmployeeRoles(true) : User.IsInRole("Head Manager") ? new List<string> { "Employee" } : new List<string> { "Employee", "HR" };
 
         ViewBag.EmploymentStatuses =
             await GetEmploymentStatusesAsync();
@@ -698,11 +786,24 @@ public class EmployeesController : Controller
     private async System.Threading.Tasks.Task ValidateEmployeeRulesAsync(
         EmployeeCreateViewModel model)
     {
-        if (!User.IsInRole("Admin") && !User.IsInRole("HR Head"))
+        if (!User.IsInRole("Admin") && !User.IsInRole("HR Head") && !User.IsInRole("Head Manager"))
         {
-            ModelState.AddModelError(
-                string.Empty,
-                "Only Admin and HR Head can create employees.");
+            ModelState.AddModelError(string.Empty, "You are not authorized to create employees.");
+        }
+
+        if (!User.IsInRole("Admin"))
+        {
+            var currentId = CurrentEmployeeId();
+            var current = currentId.HasValue ? await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId.Value) : null;
+            var departmentInScope = current != null && model.DepartmentId.HasValue && current.DepartmentId == model.DepartmentId;
+            if (!departmentInScope && current != null && User.IsInRole("HR Head") && model.DepartmentId.HasValue)
+                departmentInScope = await _context.Departments.AnyAsync(d => d.DepartmentId == model.DepartmentId.Value && d.HeadHREmployeeId == current.EmployeeId);
+            if (current == null || !departmentInScope)
+                ModelState.AddModelError(nameof(model.DepartmentId), "You may create employees only within your authorized department scope.");
+            if (User.IsInRole("Head Manager") && model.Role != "Employee")
+                ModelState.AddModelError(nameof(model.Role), "Head Managers may create Employee accounts only.");
+            if (User.IsInRole("HR Head") && model.Role != "Employee" && model.Role != "HR")
+                ModelState.AddModelError(nameof(model.Role), "HR Head may create Employee or HR accounts only within the HR department scope.");
         }
 
         if (string.Equals(

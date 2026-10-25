@@ -1,4 +1,4 @@
-﻿using EMPTRACK.Data;
+using EMPTRACK.Data;
 using EMPTRACK.Models;
 using EMPTRACK.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -54,7 +54,7 @@ public class HolidaysController : Controller
 
     // GET: /Holidays/Create
     [HttpGet]
-    [Authorize(Roles = "Admin,HR Head,HR")]
+    [Authorize(Roles = "Admin")]
     public IActionResult Create()
     {
         return View(new HolidayCreateViewModel
@@ -65,10 +65,12 @@ public class HolidaysController : Controller
 
     // POST: /Holidays/Create
     [HttpPost]
-    [Authorize(Roles = "Admin,HR Head,HR")]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(HolidayCreateViewModel model)
     {
+        if (await _context.Holidays.AnyAsync(h => h.Date == model.Date))
+            ModelState.AddModelError(nameof(model.Date), "A holiday already exists on this date.");
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -90,7 +92,7 @@ public class HolidaysController : Controller
 
     // GET: /Holidays/Edit/5
     [HttpGet]
-    [Authorize(Roles = "Admin,HR Head,HR")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Edit(int? id)
     {
         if (!id.HasValue)
@@ -117,7 +119,7 @@ public class HolidaysController : Controller
 
     // POST: /Holidays/Edit/5
     [HttpPost]
-    [Authorize(Roles = "Admin,HR Head,HR")]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
         int id,
@@ -128,6 +130,8 @@ public class HolidaysController : Controller
             return NotFound();
         }
 
+        if (await _context.Holidays.AnyAsync(h => h.Date == model.Date && h.HolidayId != id))
+            ModelState.AddModelError(nameof(model.Date), "A holiday already exists on this date.");
         if (!ModelState.IsValid)
         {
             return View(model);
@@ -153,7 +157,7 @@ public class HolidaysController : Controller
 
     // GET: /Holidays/Delete/5
     [HttpGet]
-    [Authorize(Roles = "Admin,HR Head,HR")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int? id)
     {
         if (!id.HasValue)
@@ -175,7 +179,7 @@ public class HolidaysController : Controller
 
     // POST: /Holidays/Delete/5
     [HttpPost]
-    [Authorize(Roles = "Admin,HR Head,HR")]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {

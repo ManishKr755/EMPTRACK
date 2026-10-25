@@ -1,4 +1,4 @@
-﻿@model IEnumerable<EMPTRACK.Models.Holiday>
+@model IEnumerable<EMPTRACK.Models.Holiday>
 
 @{
     ViewData["Title"] = "Company Holidays";
@@ -21,7 +21,7 @@
             </p>
         </div>
 
-        @if (User.IsInRole("Admin") || User.IsInRole("HR Head") || User.IsInRole("HR"))
+        @if (User.IsInRole("Admin"))
         {
             <a asp-action="Create" class="btn btn-primary">
                 + New Holiday
@@ -49,7 +49,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Date</th>
-                                @if (User.IsInRole("Admin") || User.IsInRole("HR Head") || User.IsInRole("HR"))
+                                @if (User.IsInRole("Admin"))
                                 {
                                     <th class="text-end">Actions</th>
                                 }
@@ -67,7 +67,7 @@
                                         @holiday.Date.ToString("dd MMM yyyy")
                                     </td>
 
-                                    @if (User.IsInRole("Admin") || User.IsInRole("HR Head") || User.IsInRole("HR"))
+                                    @if (User.IsInRole("Admin"))
                                     {
                                         <td class="text-end">
                                             <a asp-action="Details"

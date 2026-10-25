@@ -1,4 +1,4 @@
-﻿using EMPTRACK.Data;
+using EMPTRACK.Data;
 using EMPTRACK.Models;
 using EMPTRACK.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -33,6 +33,16 @@ public class DepartmentsController : Controller
             .Include(d => d.Employees)
             .Include(d => d.Teams)
             .AsNoTracking();
+
+        if (!User.IsInRole("Admin"))
+        {
+            var raw = User.FindFirst("EmployeeId")?.Value;
+            var currentId = int.TryParse(raw, out var parsed) ? parsed : 0;
+            var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId);
+            if (current == null) return Forbid();
+            if (current.Role == "Head Manager") query = query.Where(d => d.DepartmentId == current.DepartmentId);
+            else if (current.Role == "HR Head") query = query.Where(d => d.HeadHREmployeeId == current.EmployeeId || d.DepartmentId == current.DepartmentId);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -69,6 +79,14 @@ public class DepartmentsController : Controller
 
         if (department == null)
             return NotFound();
+        if (!User.IsInRole("Admin"))
+        {
+            var raw = User.FindFirst("EmployeeId")?.Value;
+            var currentId = int.TryParse(raw, out var parsed) ? parsed : 0;
+            var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId);
+            var permitted = current != null && ((current.Role == "Head Manager" && current.DepartmentId == department.DepartmentId) || (current.Role == "HR Head" && (current.DepartmentId == department.DepartmentId || department.HeadHREmployeeId == current.EmployeeId)));
+            if (!permitted) return NotFound();
+        }
 
         return View(department);
     }

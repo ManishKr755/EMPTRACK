@@ -55,14 +55,28 @@ public class LeaveTypesController : Controller
             return NotFound();
         }
 
-        var leaveType = await _context.LeaveTypes
-            .Include(l => l.LeaveBalances)
-                .ThenInclude(lb => lb.Employee)
-            .Include(l => l.LeaveRequests)
-                .ThenInclude(lr => lr.Employee)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(l =>
-                l.LeaveTypeId == id.Value);
+        IQueryable<LeaveType> query = _context.LeaveTypes.AsNoTracking();
+        if (User.IsInRole("Admin"))
+        {
+            query = query.Include(l => l.LeaveBalances).ThenInclude(lb => lb.Employee)
+                         .Include(l => l.LeaveRequests).ThenInclude(lr => lr.Employee);
+        }
+        else
+        {
+            var rawId = User.FindFirst("EmployeeId")?.Value;
+            if (!int.TryParse(rawId, out var currentId)) return Forbid();
+            var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId);
+            if (current == null) return Forbid();
+            List<int> departmentIds;
+            if (current.Role == "HR Head")
+                departmentIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+            else if (current.DepartmentId.HasValue)
+                departmentIds = new List<int> { current.DepartmentId.Value };
+            else return Forbid();
+            query = query.Include(l => l.LeaveBalances.Where(lb => lb.Employee.DepartmentId.HasValue && departmentIds.Contains(lb.Employee.DepartmentId.Value))).ThenInclude(lb => lb.Employee)
+                         .Include(l => l.LeaveRequests.Where(lr => lr.Employee.DepartmentId.HasValue && departmentIds.Contains(lr.Employee.DepartmentId.Value))).ThenInclude(lr => lr.Employee);
+        }
+        var leaveType = await query.SingleOrDefaultAsync(l => l.LeaveTypeId == id.Value);
 
         if (leaveType == null)
         {

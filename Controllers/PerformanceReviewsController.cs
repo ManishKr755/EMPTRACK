@@ -1,4 +1,4 @@
-﻿using EMPTRACK.Data;
+using EMPTRACK.Data;
 using EMPTRACK.Models;
 using EMPTRACK.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -69,19 +69,24 @@ public class PerformanceReviewsController : Controller
          * Managers and Head Managers can also see reviews
          * that they created.
          */
-        if (User.IsInRole("Manager") ||
-            User.IsInRole("Head Manager") ||
-            User.IsInRole("HR Head") ||
-            User.IsInRole("HR"))
+        if (employee.Role == "Manager" && employee.TeamId.HasValue)
         {
-            query = query.Where(r =>
-                r.EmployeeId == currentEmployeeId.Value ||
-                r.ReviewerEmployeeId == currentEmployeeId.Value);
+            var teamId = employee.TeamId.Value;
+            query = query.Where(r => r.EmployeeId == currentEmployeeId.Value || r.ReviewerEmployeeId == currentEmployeeId.Value || r.Employee.TeamId == teamId);
+        }
+        else if (employee.Role == "Head Manager" && employee.DepartmentId.HasValue)
+        {
+            var departmentId = employee.DepartmentId.Value;
+            query = query.Where(r => r.EmployeeId == currentEmployeeId.Value || r.ReviewerEmployeeId == currentEmployeeId.Value || r.Employee.DepartmentId == departmentId);
+        }
+        else if ((employee.Role == "HR Head" || employee.Role == "HR") && employee.DepartmentId.HasValue)
+        {
+            var departmentId = employee.DepartmentId.Value;
+            query = query.Where(r => r.EmployeeId == currentEmployeeId.Value || r.ReviewerEmployeeId == currentEmployeeId.Value || r.Employee.DepartmentId == departmentId);
         }
         else
         {
-            query = query.Where(r =>
-                r.EmployeeId == currentEmployeeId.Value);
+            query = query.Where(r => r.EmployeeId == currentEmployeeId.Value || r.ReviewerEmployeeId == currentEmployeeId.Value);
         }
 
         var reviews = await query
@@ -486,24 +491,14 @@ public class PerformanceReviewsController : Controller
         /*
          * An employee can see their own review.
          */
-        if (review.EmployeeId == currentEmployeeId.Value)
-        {
+        if (review.EmployeeId == currentEmployeeId.Value || review.ReviewerEmployeeId == currentEmployeeId.Value)
             return true;
-        }
 
-        /*
-         * Managers and HR-type roles can see reviews
-         * they created.
-         */
-        if ((User.IsInRole("Manager") ||
-             User.IsInRole("Head Manager") ||
-             User.IsInRole("HR Head") ||
-             User.IsInRole("HR")) &&
-            review.ReviewerEmployeeId == currentEmployeeId.Value)
-        {
-            return true;
-        }
-
+        var current = await GetCurrentEmployeeAsync();
+        if (current == null || review.Employee == null) return false;
+        if (current.Role == "Manager") return current.TeamId.HasValue && review.Employee.TeamId == current.TeamId;
+        if (current.Role == "Head Manager" || current.Role == "HR Head" || current.Role == "HR")
+            return current.DepartmentId.HasValue && review.Employee.DepartmentId == current.DepartmentId;
         return false;
     }
 

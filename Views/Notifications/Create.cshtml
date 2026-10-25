@@ -1,4 +1,4 @@
-﻿@model EMPTRACK.Models.ViewModels.NotificationCreateViewModel
+@model EMPTRACK.Models.ViewModels.NotificationCreateViewModel
 
 @{
     ViewData["Title"] = "Create Notification";
@@ -23,7 +23,13 @@
                      class="text-danger mb-3"></div>
 
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-12 form-check mb-2">
+                        <input asp-for="SendToScope" class="form-check-input" id="SendToScope" />
+                        <label asp-for="SendToScope" class="form-check-label"></label>
+                        <div class="form-text">Admin sends to all active employees; Head Manager and HR Head send within their authorized department scope; Manager sends within their team. Each employee receives a separate notification record.</div>
+                    </div>
+                    <div class="col-md-6" id="individualRecipient">
+
                         <label asp-for="EmployeeId"
                                class="form-label">
                         </label>
@@ -93,4 +99,13 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const toggle = document.getElementById("SendToScope");
+            const recipient = document.getElementById("individualRecipient");
+            function updateRecipient() { recipient.hidden = toggle.checked; }
+            toggle.addEventListener("change", updateRecipient);
+            updateRecipient();
+        });
+    </script>
 }

@@ -1,4 +1,4 @@
-using EMPTRACK.Data;
+﻿using EMPTRACK.Data;
 using EMPTRACK.Models;
 using EMPTRACK.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -21,7 +21,6 @@ public class LeaveRequestsController : Controller
     {
         "Admin",
         "HR Head",
-        "HR",
         "Head Manager",
         "Manager"
     };
@@ -49,6 +48,8 @@ public class LeaveRequestsController : Controller
         }
 
         var canViewAllRequests = IsRequestViewer();
+        if ((User.IsInRole("HR Head") || User.IsInRole("Head Manager") || User.IsInRole("Manager")) && (!currentUser.EmployeeId.HasValue || currentUser.Employee == null))
+            return Forbid();
 
         var query = _context.LeaveRequests
             .Include(lr => lr.Employee)
@@ -59,6 +60,24 @@ public class LeaveRequestsController : Controller
             .Include(lr => lr.ApprovedByUser)
             .AsNoTracking()
             .AsQueryable();
+
+        if (User.IsInRole("Head Manager") && currentUser.EmployeeId.HasValue)
+        {
+            var departmentIdForUser = currentUser.Employee?.DepartmentId;
+            query = departmentIdForUser.HasValue ? query.Where(lr => lr.Employee.DepartmentId == departmentIdForUser.Value) : query.Where(lr => false);
+        }
+        else if (User.IsInRole("Manager") && currentUser.EmployeeId.HasValue)
+        {
+            var teamIdForUser = currentUser.Employee?.TeamId;
+            query = teamIdForUser.HasValue ? query.Where(lr => lr.Employee.TeamId == teamIdForUser.Value) : query.Where(lr => false);
+        }
+        else if (User.IsInRole("HR Head") && currentUser.EmployeeId.HasValue)
+        {
+            var hrDepartmentIds = await _context.Departments.AsNoTracking()
+                .Where(d => d.DepartmentId == currentUser.Employee!.DepartmentId || d.HeadHREmployeeId == currentUser.EmployeeId.Value)
+                .Select(d => d.DepartmentId).ToListAsync();
+            query = query.Where(lr => lr.Employee.DepartmentId.HasValue && hrDepartmentIds.Contains(lr.Employee.DepartmentId.Value));
+        }
 
         if (!canViewAllRequests)
         {
@@ -244,14 +263,10 @@ public class LeaveRequestsController : Controller
             return NotFound();
         }
 
-        if (!IsRequestViewer())
+        if (!await CanViewRequestAsync(currentUser, request))
         {
-            if (!currentUser.EmployeeId.HasValue ||
-                request.EmployeeId != currentUser.EmployeeId.Value)
-            {
-                // Do not reveal another employee's request.
-                return NotFound();
-            }
+            // Do not reveal another employee's request by changing the URL id.
+            return NotFound();
         }
 
         ViewBag.CanViewApprover = IsRequestViewer();
@@ -426,6 +441,7 @@ public class LeaveRequestsController : Controller
     [HttpGet]
     public async Task<IActionResult> Create()
     {
+        if (User.IsInRole("Admin")) return Forbid();
         var currentUser = await GetCurrentUserAccountAsync();
 
         if (currentUser?.EmployeeId == null ||
@@ -466,6 +482,7 @@ public class LeaveRequestsController : Controller
     public async Task<IActionResult> Create(
         LeaveRequestCreateViewModel model)
     {
+        if (User.IsInRole("Admin")) return Forbid();
         var currentUser = await GetCurrentUserAccountAsync();
 
         if (currentUser?.EmployeeId == null ||
@@ -586,6 +603,23 @@ public class LeaveRequestsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    private async Task<bool> CanViewRequestAsync(UserAccount currentUser, LeaveRequest request)
+    {
+        if (User.IsInRole("Admin")) return true;
+        if (!currentUser.EmployeeId.HasValue || currentUser.Employee == null) return false;
+        if (request.EmployeeId == currentUser.EmployeeId.Value) return true;
+        var current = currentUser.Employee;
+        var target = request.Employee;
+        if (current.Role == "Manager") return current.TeamId.HasValue && target.TeamId == current.TeamId;
+        if (current.Role == "Head Manager") return current.DepartmentId.HasValue && target.DepartmentId == current.DepartmentId;
+        if (current.Role == "HR Head")
+        {
+            if (current.DepartmentId == target.DepartmentId) return true;
+            return await _context.Departments.AsNoTracking().AnyAsync(d => d.DepartmentId == target.DepartmentId && d.HeadHREmployeeId == current.EmployeeId);
+        }
+        return false;
+    }
+
     private bool IsRequestViewer()
     {
         return RequestViewerRoles.Any(User.IsInRole);
@@ -595,8 +629,7 @@ public class LeaveRequestsController : Controller
     {
         return User.IsInRole("Admin") ||
                User.IsInRole("HR Head") ||
-               User.IsInRole("Head Manager") ||
-               User.IsInRole("Manager");
+               User.IsInRole("Head Manager");
     }
 
     private bool CanUserActOnRequest(
@@ -610,19 +643,12 @@ public class LeaveRequestsController : Controller
             return false;
         }
 
-        // An employee must never approve their own request.
-        if (currentUser.EmployeeId.HasValue &&
-            currentUser.EmployeeId.Value == request.EmployeeId)
-        {
-            return false;
-        }
+        // Admin is an application-level account and must not be linked to an employee.
+        if (User.IsInRole("Admin")) return !currentUser.EmployeeId.HasValue;
 
-        // Admin is an application-level account and has no Employee row.
-        if (User.IsInRole("Admin") &&
-            currentUser.EmployeeId == null)
-        {
-            return true;
-        }
+        // An employee must never approve their own request.
+        if (currentUser.EmployeeId.HasValue && currentUser.EmployeeId.Value == request.EmployeeId)
+            return false;
 
         if (!currentUser.EmployeeId.HasValue ||
             currentUser.Employee == null)
@@ -668,14 +694,6 @@ public class LeaveRequestsController : Controller
             employee.Department?.HeadHREmployeeId ==
                 currentEmployeeId &&
             User.IsInRole("HR Head"))
-        {
-            return true;
-        }
-
-        // Normal employees are approved by their team's Manager.
-        if (User.IsInRole("Manager") &&
-            employee.Team?.ManagerEmployeeId ==
-                currentEmployeeId)
         {
             return true;
         }
@@ -791,11 +809,22 @@ public class LeaveRequestsController : Controller
     private async System.Threading.Tasks.Task PopulateEmployeeFilterAsync(
         int? selectedEmployeeId = null)
     {
-        var employees = await _context.Employees
-            .AsNoTracking()
-            .OrderBy(e => e.FirstName)
-            .ThenBy(e => e.LastName)
-            .ToListAsync();
+        var employeesQuery = _context.Employees.AsNoTracking().AsQueryable();
+        if (!User.IsInRole("Admin"))
+        {
+            var currentId = int.TryParse(User.FindFirst("EmployeeId")?.Value, out var parsedId) ? parsedId : 0;
+            var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId);
+            if (current == null) { ViewBag.EmployeeFilter = new List<SelectListItem>(); return; }
+            if (current.Role == "Manager") employeesQuery = current.TeamId.HasValue ? employeesQuery.Where(e => e.TeamId == current.TeamId.Value) : employeesQuery.Where(e => false);
+            else if (current.Role == "Head Manager") employeesQuery = current.DepartmentId.HasValue ? employeesQuery.Where(e => e.DepartmentId == current.DepartmentId.Value) : employeesQuery.Where(e => false);
+            else if (current.Role == "HR Head")
+            {
+                var deptIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+                employeesQuery = employeesQuery.Where(e => e.DepartmentId.HasValue && deptIds.Contains(e.DepartmentId.Value));
+            }
+            else employeesQuery = employeesQuery.Where(e => e.EmployeeId == current.EmployeeId);
+        }
+        var employees = await employeesQuery.OrderBy(e => e.FirstName).ThenBy(e => e.LastName).ToListAsync();
 
         ViewBag.EmployeeFilter = employees
             .Select(e => new SelectListItem

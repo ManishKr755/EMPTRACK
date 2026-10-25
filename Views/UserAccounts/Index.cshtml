@@ -1,4 +1,4 @@
-﻿@model IEnumerable<EMPTRACK.Models.UserAccount>
+@model IEnumerable<EMPTRACK.Models.UserAccount>
 
 @{
     ViewData["Title"] = "User Accounts";
@@ -211,11 +211,7 @@
                                             Edit
                                         </a>
 
-                                        <a asp-action="ResetPassword"
-                                           asp-route-id="@account.UserAccountId"
-                                           class="btn btn-sm btn-outline-warning">
-                                            Password
-                                        </a>
+                                        
 
                                     </td>
 

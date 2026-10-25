@@ -1,4 +1,4 @@
-﻿using EMPTRACK.Data;
+using EMPTRACK.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -47,37 +47,71 @@ public class DashboardController : Controller
             // Organization-wide metrics are restricted to Admin, HR Head,
             // HR, Head Manager and Manager. A standard Employee never
             // receives this data.
-            var totalEmployees = await _context.Employees
-                .AsNoTracking()
-                .CountAsync();
+            var employeesQuery = _context.Employees.AsNoTracking().AsQueryable();
+            var teamsQuery = _context.Teams.AsNoTracking().AsQueryable();
+            var attendanceQuery = _context.Attendances.AsNoTracking().AsQueryable();
+            var leaveQuery = _context.LeaveRequests.AsNoTracking().AsQueryable();
+            var departmentCountQuery = _context.Departments.AsNoTracking().AsQueryable();
+            var teamCountQuery = _context.Teams.AsNoTracking().AsQueryable();
 
-            var activeEmployees = await _context.Employees
-                .AsNoTracking()
-                .CountAsync(e => e.EmploymentStatus == "Active");
+            if (!User.IsInRole("Admin"))
+            {
+                if (!int.TryParse(employeeIdClaim, out var scopeEmployeeId)) return Forbid();
+                var scopeEmployee = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == scopeEmployeeId);
+                if (scopeEmployee == null) return Forbid();
+                if (scopeEmployee.Role == "Manager")
+                {
+                    if (!scopeEmployee.TeamId.HasValue) return Forbid();
+                    var scopeTeamId = scopeEmployee.TeamId.Value;
+                    employeesQuery = employeesQuery.Where(e => e.TeamId == scopeTeamId);
+                    teamsQuery = teamsQuery.Where(t => t.TeamId == scopeTeamId);
+                    attendanceQuery = attendanceQuery.Where(a => a.Employee.TeamId == scopeTeamId);
+                    leaveQuery = leaveQuery.Where(l => l.Employee.TeamId == scopeTeamId);
+                    departmentCountQuery = departmentCountQuery.Where(d => d.DepartmentId == scopeEmployee.DepartmentId);
+                    teamCountQuery = teamCountQuery.Where(t => t.TeamId == scopeTeamId);
+                }
+                else if (scopeEmployee.Role == "Head Manager")
+                {
+                    if (!scopeEmployee.DepartmentId.HasValue) return Forbid();
+                    var scopeDepartmentId = scopeEmployee.DepartmentId.Value;
+                    employeesQuery = employeesQuery.Where(e => e.DepartmentId == scopeDepartmentId);
+                    teamsQuery = teamsQuery.Where(t => t.DepartmentId == scopeDepartmentId);
+                    attendanceQuery = attendanceQuery.Where(a => a.Employee.DepartmentId == scopeDepartmentId);
+                    leaveQuery = leaveQuery.Where(l => l.Employee.DepartmentId == scopeDepartmentId);
+                    departmentCountQuery = departmentCountQuery.Where(d => d.DepartmentId == scopeDepartmentId);
+                    teamCountQuery = teamCountQuery.Where(t => t.DepartmentId == scopeDepartmentId);
+                }
+                else if (scopeEmployee.Role == "HR Head")
+                {
+                    var scopeDepartmentIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == scopeEmployee.DepartmentId || d.HeadHREmployeeId == scopeEmployee.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+                    employeesQuery = employeesQuery.Where(e => e.DepartmentId.HasValue && scopeDepartmentIds.Contains(e.DepartmentId.Value));
+                    teamsQuery = teamsQuery.Where(t => scopeDepartmentIds.Contains(t.DepartmentId));
+                    attendanceQuery = attendanceQuery.Where(a => a.Employee.DepartmentId.HasValue && scopeDepartmentIds.Contains(a.Employee.DepartmentId.Value));
+                    leaveQuery = leaveQuery.Where(l => l.Employee.DepartmentId.HasValue && scopeDepartmentIds.Contains(l.Employee.DepartmentId.Value));
+                    departmentCountQuery = departmentCountQuery.Where(d => scopeDepartmentIds.Contains(d.DepartmentId));
+                    teamCountQuery = teamCountQuery.Where(t => scopeDepartmentIds.Contains(t.DepartmentId));
+                }
+                else if (scopeEmployee.Role == "HR")
+                {
+                    if (!scopeEmployee.DepartmentId.HasValue) return Forbid();
+                    var scopeDepartmentId = scopeEmployee.DepartmentId.Value;
+                    employeesQuery = employeesQuery.Where(e => e.DepartmentId == scopeDepartmentId);
+                    teamsQuery = teamsQuery.Where(t => t.DepartmentId == scopeDepartmentId);
+                    attendanceQuery = attendanceQuery.Where(a => a.Employee.DepartmentId == scopeDepartmentId);
+                    leaveQuery = leaveQuery.Where(l => l.Employee.DepartmentId == scopeDepartmentId);
+                    departmentCountQuery = departmentCountQuery.Where(d => d.DepartmentId == scopeDepartmentId);
+                    teamCountQuery = teamCountQuery.Where(t => t.DepartmentId == scopeDepartmentId);
+                }
+                else return Forbid();
+            }
 
-            var totalDepartments = await _context.Departments
-                .AsNoTracking()
-                .CountAsync();
-
-            var totalTeams = await _context.Teams
-                .AsNoTracking()
-                .CountAsync();
-
-            var todayAttendance = await _context.Attendances
-                .AsNoTracking()
-                .CountAsync(a => a.Date == today);
-
-            var pendingLeaveRequests = await _context.LeaveRequests
-                .AsNoTracking()
-                .CountAsync(l => l.Status == "Pending");
-
-            var recentEmployees = await _context.Employees
-                .AsNoTracking()
-                .Include(e => e.Department)
-                .Include(e => e.Team)
-                .OrderByDescending(e => e.EmployeeId)
-                .Take(5)
-                .ToListAsync();
+            var totalEmployees = await employeesQuery.CountAsync();
+            var activeEmployees = await employeesQuery.CountAsync(e => e.EmploymentStatus == "Active");
+            var totalDepartments = await departmentCountQuery.CountAsync();
+            var totalTeams = await teamCountQuery.CountAsync();
+            var todayAttendance = await attendanceQuery.CountAsync(a => a.Date == today);
+            var pendingLeaveRequests = await leaveQuery.CountAsync(l => l.Status == "Pending");
+            var recentEmployees = await employeesQuery.Include(e => e.Department).Include(e => e.Team).OrderByDescending(e => e.EmployeeId).Take(5).ToListAsync();
 
             ViewBag.TotalEmployees = totalEmployees;
             ViewBag.ActiveEmployees = activeEmployees;

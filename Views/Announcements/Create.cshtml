@@ -37,6 +37,22 @@
                               class="text-danger"></span>
                     </div>
 
+                    <div class="col-md-6">
+                        <label asp-for="AudienceType" class="form-label">Audience</label>
+                        <select asp-for="AudienceType" class="form-select">
+                            <option value="AllExceptAdmin">All eligible employees (except Admin)</option>
+                            <option value="Department">Specific department</option>
+                        </select>
+                        <span asp-validation-for="AudienceType" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DepartmentId" class="form-label">Department (when targeted)</label>
+                        <select asp-for="DepartmentId" asp-items="ViewBag.Departments" class="form-select">
+                            <option value="">Select department</option>
+                        </select>
+                        <span asp-validation-for="DepartmentId" class="text-danger"></span>
+                    </div>
+
                     <div class="col-12">
                         <label asp-for="Content"
                                class="form-label">

@@ -45,21 +45,6 @@ public class NotificationsController : Controller
             return View(notifications);
         }
 
-        // Admin is not an Employee. Management users may view the
-        // notification records without being assigned an employee.
-        if (IsManagementUser())
-        {
-            var notifications = await _context.Notifications
-                .Include(n => n.Employee)
-                .AsNoTracking()
-                .OrderBy(n => n.IsRead)
-                .ThenByDescending(n => n.CreatedAt)
-                .ThenByDescending(n => n.NotificationId)
-                .ToListAsync();
-
-            return View(notifications);
-        }
-
         return Forbid();
     }
 
@@ -90,17 +75,12 @@ public class NotificationsController : Controller
             return View(notification);
         }
 
-        if (!currentEmployeeId.HasValue && IsManagementUser())
-        {
-            return View(notification);
-        }
-
-        return Forbid();
+        return NotFound();
     }
 
     // GET: /Notifications/Create
     [HttpGet]
-    [Authorize(Roles = "Admin,HR Head,HR,Head Manager,Manager")]
+    [Authorize(Roles = "Admin,HR Head,Head Manager,Manager")]
     public async Task<IActionResult> Create()
     {
         await PopulateEmployeeListAsync();
@@ -109,28 +89,36 @@ public class NotificationsController : Controller
 
     // POST: /Notifications/Create
     [HttpPost]
-    [Authorize(Roles = "Admin,HR Head,HR,Head Manager,Manager")]
+    [Authorize(Roles = "Admin,HR Head,Head Manager,Manager")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         NotificationCreateViewModel model)
     {
-        if (!ModelState.IsValid)
+        if (model.SendToScope) ModelState.Remove(nameof(model.EmployeeId));
+        if (!ModelState.IsValid || (!model.SendToScope && !await CanNotifyEmployeeAsync(model.EmployeeId)))
         {
+            if (ModelState.IsValid && !model.SendToScope) ModelState.AddModelError(nameof(model.EmployeeId), "You cannot send notifications to that employee.");
             await PopulateEmployeeListAsync(model.EmployeeId);
             return View(model);
         }
 
         try
         {
-            var notification =
-                await _notificationService.CreateNotificationAsync(
-                    model.EmployeeId,
-                    model.Title,
-                    model.Message);
+            List<int> recipientIds;
+            if (model.SendToScope)
+            {
+                recipientIds = await GetAuthorizedRecipientIdsAsync();
+                if (recipientIds.Count == 0)
+                {
+                    ModelState.AddModelError(string.Empty, "No active recipients were found in your authorized scope.");
+                    await PopulateEmployeeListAsync(model.EmployeeId);
+                    return View(model);
+                }
+            }
+            else recipientIds = new List<int> { model.EmployeeId };
 
-            TempData["SuccessMessage"] =
-                "Notification created successfully.";
-
+            var created = await _notificationService.CreateNotificationsAsync(recipientIds, model.Title, model.Message);
+            TempData["SuccessMessage"] = $"Notification delivered to {created.Count} recipient(s). Each recipient has an independent read status.";
             return RedirectToAction(nameof(Index));
         }
         catch (ArgumentException ex)
@@ -225,6 +213,42 @@ public class NotificationsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+
+    private async Task<List<int>> GetAuthorizedRecipientIdsAsync()
+    {
+        var active = _context.Employees.AsNoTracking().Where(e => e.EmploymentStatus == "Active");
+        if (User.IsInRole("Admin")) return await active.Select(e => e.EmployeeId).ToListAsync();
+        var currentId = GetCurrentEmployeeId();
+        if (!currentId.HasValue) return new List<int>();
+        var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId.Value);
+        if (current == null) return new List<int>();
+        if (current.Role == "Manager" && current.TeamId.HasValue)
+            return await active.Where(e => e.TeamId == current.TeamId.Value).Select(e => e.EmployeeId).ToListAsync();
+        if (current.Role == "Head Manager" && current.DepartmentId.HasValue)
+            return await active.Where(e => e.DepartmentId == current.DepartmentId.Value).Select(e => e.EmployeeId).ToListAsync();
+        if (current.Role == "HR Head")
+        {
+            var departments = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+            return await active.Where(e => e.DepartmentId.HasValue && departments.Contains(e.DepartmentId.Value)).Select(e => e.EmployeeId).ToListAsync();
+        }
+        return new List<int>();
+    }
+
+    private async Task<bool> CanNotifyEmployeeAsync(int recipientId)
+    {
+        var recipient = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == recipientId && e.EmploymentStatus == "Active");
+        if (recipient == null) return false;
+        if (User.IsInRole("Admin")) return true;
+        var currentId = GetCurrentEmployeeId();
+        if (!currentId.HasValue) return false;
+        var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId.Value);
+        if (current == null) return false;
+        if (current.Role == "Manager") return current.TeamId.HasValue && recipient.TeamId == current.TeamId;
+        if (current.Role == "Head Manager") return current.DepartmentId.HasValue && recipient.DepartmentId == current.DepartmentId;
+        if (current.Role == "HR Head") return recipient.DepartmentId == current.DepartmentId || await _context.Departments.AnyAsync(d => d.DepartmentId == recipient.DepartmentId && d.HeadHREmployeeId == current.EmployeeId);
+        return false;
+    }
+
     private int? GetCurrentEmployeeId()
     {
         var claimValue = User.FindFirstValue("EmployeeId");
@@ -250,11 +274,22 @@ public class NotificationsController : Controller
     private async Task PopulateEmployeeListAsync(
         int? selectedEmployeeId = null)
     {
-        var employees = await _context.Employees
-            .AsNoTracking()
-            .OrderBy(e => e.FirstName)
-            .ThenBy(e => e.LastName)
-            .ToListAsync();
+        var currentEmployeeId = GetCurrentEmployeeId();
+        var current = currentEmployeeId.HasValue ? await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentEmployeeId.Value) : null;
+        var query = _context.Employees.AsNoTracking().Where(e => e.EmploymentStatus == "Active");
+        if (!User.IsInRole("Admin"))
+        {
+            if (current == null) query = query.Where(e => false);
+            else if (current.Role == "Manager" && current.TeamId.HasValue) query = query.Where(e => e.TeamId == current.TeamId.Value);
+            else if (current.Role == "Head Manager" && current.DepartmentId.HasValue) query = query.Where(e => e.DepartmentId == current.DepartmentId.Value);
+            else if (current.Role == "HR Head")
+        {
+            var departmentIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+            query = query.Where(e => e.DepartmentId.HasValue && departmentIds.Contains(e.DepartmentId.Value));
+        }
+            else query = query.Where(e => false);
+        }
+        var employees = await query.OrderBy(e => e.FirstName).ThenBy(e => e.LastName).ToListAsync();
 
         ViewBag.Employees = employees
             .Select(e => new SelectListItem

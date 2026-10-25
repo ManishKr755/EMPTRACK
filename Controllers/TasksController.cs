@@ -136,7 +136,7 @@ public class TasksController : Controller
 
         await PopulateEmployeeListAsync(assignedEmployeeId);
 
-        ViewBag.CanCreate = currentEmployeeId.HasValue;
+        ViewBag.CanCreate = currentEmployeeId.HasValue && (User.IsInRole("Head Manager") || User.IsInRole("Manager"));
 
         var tasks = await query
             .OrderByDescending(t => t.CreatedAt)
@@ -174,7 +174,8 @@ public class TasksController : Controller
 
         ViewBag.CanEdit =
             currentEmployeeId.HasValue &&
-            task.CreatedByEmployeeId == currentEmployeeId.Value;
+            task.CreatedByEmployeeId == currentEmployeeId.Value &&
+            (User.IsInRole("Head Manager") || User.IsInRole("Manager"));
 
         ViewBag.CanUpdateStatus =
             currentEmployeeId.HasValue &&
@@ -186,7 +187,10 @@ public class TasksController : Controller
     [HttpGet]
     public async Task<IActionResult> Create()
     {
+        if (User.IsInRole("Admin")) return Forbid();
         var employeeId = GetCurrentEmployeeId();
+        var creator = employeeId.HasValue ? await GetCurrentEmployeeAsync(employeeId.Value) : null;
+        if (creator == null || !(creator.Role == "Head Manager" || creator.Role == "Manager")) return Forbid();
 
         if (!employeeId.HasValue)
         {
@@ -209,7 +213,10 @@ public class TasksController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(TaskCreateViewModel model)
     {
+        if (User.IsInRole("Admin")) return Forbid();
         var createdByEmployeeId = GetCurrentEmployeeId();
+        var creatorRole = createdByEmployeeId.HasValue ? await GetCurrentEmployeeAsync(createdByEmployeeId.Value) : null;
+        if (creatorRole == null || !(creatorRole.Role == "Head Manager" || creatorRole.Role == "Manager")) return Forbid();
 
         if (!createdByEmployeeId.HasValue)
         {
@@ -267,6 +274,7 @@ public class TasksController : Controller
     [HttpGet]
     public async Task<IActionResult> Edit(int? id)
     {
+        if (User.IsInRole("Admin")) return Forbid();
         if (!id.HasValue)
         {
             return NotFound();
@@ -282,6 +290,8 @@ public class TasksController : Controller
         }
 
         var currentEmployeeId = GetCurrentEmployeeId();
+        var editor = currentEmployeeId.HasValue ? await GetCurrentEmployeeAsync(currentEmployeeId.Value) : null;
+        if (editor == null || !(editor.Role == "Head Manager" || editor.Role == "Manager")) return Forbid();
 
         if (!currentEmployeeId.HasValue ||
             task.CreatedByEmployeeId != currentEmployeeId.Value)
@@ -309,6 +319,7 @@ public class TasksController : Controller
         int id,
         TaskEditViewModel model)
     {
+        if (User.IsInRole("Admin")) return Forbid();
         if (id != model.TaskId)
         {
             return NotFound();
@@ -323,6 +334,8 @@ public class TasksController : Controller
         }
 
         var currentEmployeeId = GetCurrentEmployeeId();
+        var editor = currentEmployeeId.HasValue ? await GetCurrentEmployeeAsync(currentEmployeeId.Value) : null;
+        if (editor == null || !(editor.Role == "Head Manager" || editor.Role == "Manager")) return Forbid();
 
         if (!currentEmployeeId.HasValue ||
             task.CreatedByEmployeeId != currentEmployeeId.Value)
@@ -375,6 +388,7 @@ public class TasksController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateStatus(int id, string? status)
     {
+        if (User.IsInRole("Admin")) return Forbid();
         var task = await _context.Tasks
             .SingleOrDefaultAsync(t => t.TaskId == id);
 

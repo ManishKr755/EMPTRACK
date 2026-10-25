@@ -30,6 +30,23 @@ public class LeaveBalancesController : Controller
         await _leaveBalanceService.EnsureAndAccrueAsync();
 
         var employeesQuery = _context.Employees.AsNoTracking().AsQueryable();
+        var currentEmployeeId = int.TryParse(User.FindFirst("EmployeeId")?.Value, out var parsedEmployeeId) ? parsedEmployeeId : (int?)null;
+        if (!User.IsInRole("Admin"))
+        {
+            var current = currentEmployeeId.HasValue ? await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentEmployeeId.Value) : null;
+            if (current == null) return Forbid();
+            if (current.Role == "HR Head")
+            {
+                var scopedDepartmentIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+                employeesQuery = employeesQuery.Where(e => e.DepartmentId.HasValue && scopedDepartmentIds.Contains(e.DepartmentId.Value));
+            }
+            else
+            {
+                if (!current.DepartmentId.HasValue) return Forbid();
+                var scopedDepartmentId = current.DepartmentId.Value;
+                employeesQuery = employeesQuery.Where(e => e.DepartmentId == scopedDepartmentId);
+            }
+        }
         if (employeeId.HasValue)
             employeesQuery = employeesQuery.Where(e => e.EmployeeId == employeeId.Value);
 
@@ -87,6 +104,16 @@ public class LeaveBalancesController : Controller
         var employee = await _context.Employees.AsNoTracking()
             .SingleOrDefaultAsync(e => e.EmployeeId == id.Value);
         if (employee == null) return NotFound();
+        if (!User.IsInRole("Admin"))
+        {
+            var currentId = int.TryParse(User.FindFirst("EmployeeId")?.Value, out var parsedId) ? parsedId : 0;
+            var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId);
+            if (current == null) return NotFound();
+            var inScope = current.DepartmentId.HasValue && current.DepartmentId == employee.DepartmentId;
+            if (!inScope && current.Role == "HR Head" && employee.DepartmentId.HasValue)
+                inScope = await _context.Departments.AsNoTracking().AnyAsync(d => d.DepartmentId == employee.DepartmentId.Value && d.HeadHREmployeeId == current.EmployeeId);
+            if (!inScope) return NotFound();
+        }
 
         var leaveTypes = await _context.LeaveTypes.AsNoTracking()
             .OrderBy(t => t.Name).ToListAsync();
@@ -125,180 +152,24 @@ public class LeaveBalancesController : Controller
     // GET: /LeaveBalances/Create
     [Authorize(Roles = "Admin,HR Head,HR")]
     [HttpGet]
-    public async Task<IActionResult> Create()
-    {
-        await PopulateEmployeeListAsync();
-        await PopulateLeaveTypeListAsync();
-
-        return View(new LeaveBalanceCreateViewModel());
-    }
+    public IActionResult Create() => Forbid(); // Balances are service/accrual/approval-managed.
 
     // POST: /LeaveBalances/Create
     [Authorize(Roles = "Admin,HR Head,HR")]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(LeaveBalanceCreateViewModel model)
-    {
-        var employeeExists = await _context.Employees
-            .AnyAsync(e => e.EmployeeId == model.EmployeeId);
-
-        if (!employeeExists)
-        {
-            ModelState.AddModelError(
-                nameof(model.EmployeeId),
-                "The selected employee does not exist.");
-        }
-
-        var leaveType = await _context.LeaveTypes
-            .AsNoTracking()
-            .SingleOrDefaultAsync(l => l.LeaveTypeId == model.LeaveTypeId);
-
-        if (leaveType == null)
-        {
-            ModelState.AddModelError(
-                nameof(model.LeaveTypeId),
-                "The selected leave type does not exist.");
-        }
-        else if (!leaveType.IsActive)
-        {
-            ModelState.AddModelError(
-                nameof(model.LeaveTypeId),
-                "An inactive leave type cannot be assigned a new balance.");
-        }
-
-        var duplicateExists = await _context.LeaveBalances
-            .AnyAsync(lb =>
-                lb.EmployeeId == model.EmployeeId &&
-                lb.LeaveTypeId == model.LeaveTypeId);
-
-        if (duplicateExists)
-        {
-            ModelState.AddModelError(
-                string.Empty,
-                "This employee already has a balance for this leave type.");
-        }
-
-        if (!ModelState.IsValid)
-        {
-            await PopulateEmployeeListAsync(model.EmployeeId);
-            await PopulateLeaveTypeListAsync(model.LeaveTypeId);
-            return View(model);
-        }
-
-        var balance = new LeaveBalance
-        {
-            EmployeeId = model.EmployeeId,
-            LeaveTypeId = model.LeaveTypeId,
-            AvailableLeaves = leaveType!.AllocationLimit
-        };
-
-        _context.LeaveBalances.Add(balance);
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            ModelState.AddModelError(
-                string.Empty,
-                "The leave balance could not be saved. " +
-                "A balance for this employee and leave type may already exist.");
-
-            await PopulateEmployeeListAsync(model.EmployeeId);
-            await PopulateLeaveTypeListAsync(model.LeaveTypeId);
-            return View(model);
-        }
-
-        TempData["SuccessMessage"] = "Leave balance created successfully.";
-
-        return RedirectToAction(nameof(Index));
-    }
+    public IActionResult Create(LeaveBalanceCreateViewModel model) => Forbid(); // Balances are service/accrual/approval-managed.
 
     // GET: /LeaveBalances/Edit/5
     [Authorize(Roles = "Admin,HR Head,HR")]
     [HttpGet]
-    public async Task<IActionResult> Edit(int? id)
-    {
-        if (!id.HasValue)
-        {
-            return NotFound();
-        }
-
-        var balance = await _context.LeaveBalances
-            .Include(lb => lb.Employee)
-            .Include(lb => lb.LeaveType)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(lb => lb.LeaveBalanceId == id.Value);
-
-        if (balance == null)
-        {
-            return NotFound();
-        }
-
-        var model = new LeaveBalanceEditViewModel
-        {
-            LeaveBalanceId = balance.LeaveBalanceId,
-            EmployeeDisplayName = $"{balance.Employee.EmployeeCode} - {balance.Employee.FirstName} {balance.Employee.LastName}",
-            LeaveTypeDisplayName = balance.LeaveType.Name,
-            AvailableLeaves = balance.AvailableLeaves
-        };
-
-        return View(model);
-    }
+    public IActionResult Edit(int? id) => Forbid(); // Balances are service/accrual/approval-managed.
 
     // POST: /LeaveBalances/Edit/5
     [Authorize(Roles = "Admin,HR Head,HR")]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(
-        int id,
-        LeaveBalanceEditViewModel model)
-    {
-        if (id != model.LeaveBalanceId)
-        {
-            return BadRequest();
-        }
-
-        var balance = await _context.LeaveBalances
-            .Include(lb => lb.Employee)
-            .Include(lb => lb.LeaveType)
-            .SingleOrDefaultAsync(lb => lb.LeaveBalanceId == id);
-
-        if (balance == null)
-        {
-            return NotFound();
-        }
-
-        if (!ModelState.IsValid)
-        {
-            model.EmployeeDisplayName =
-                $"{balance.Employee.EmployeeCode} - {balance.Employee.FirstName} {balance.Employee.LastName}";
-            model.LeaveTypeDisplayName = balance.LeaveType.Name;
-            return View(model);
-        }
-
-        // EmployeeId and LeaveTypeId identify the balance and are never changed here.
-        // This edit only changes AvailableLeaves.
-        balance.AvailableLeaves = model.AvailableLeaves;
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            ModelState.AddModelError(
-                string.Empty,
-                "The leave balance could not be updated.");
-
-            return View(model);
-        }
-
-        TempData["SuccessMessage"] = "Leave balance updated successfully.";
-
-        return RedirectToAction(nameof(Index));
-    }
+    public IActionResult Edit(int id, LeaveBalanceEditViewModel model) => Forbid(); // Balances are service/accrual/approval-managed.
 
     // GET: /LeaveBalances/MyBalances
     // Employees can view their own balances, but cannot change them.
@@ -360,10 +231,20 @@ public class LeaveBalancesController : Controller
 
     private async Task PopulateEmployeeFilterAsync(int? selectedEmployeeId = null)
     {
-        var employees = await _context.Employees
-            .AsNoTracking()
-            .OrderBy(e => e.EmployeeCode)
-            .ToListAsync();
+        var employeesQuery = _context.Employees.AsNoTracking().AsQueryable();
+        if (!User.IsInRole("Admin"))
+        {
+            var currentId = int.TryParse(User.FindFirst("EmployeeId")?.Value, out var parsedId) ? parsedId : 0;
+            var current = await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == currentId);
+            if (current == null) { ViewBag.EmployeeFilter = new List<SelectListItem>(); return; }
+            if (current.Role == "HR Head")
+            {
+                var deptIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
+                employeesQuery = employeesQuery.Where(e => e.DepartmentId.HasValue && deptIds.Contains(e.DepartmentId.Value));
+            }
+            else employeesQuery = current.DepartmentId.HasValue ? employeesQuery.Where(e => e.DepartmentId == current.DepartmentId.Value) : employeesQuery.Where(e => false);
+        }
+        var employees = await employeesQuery.OrderBy(e => e.EmployeeCode).ToListAsync();
 
         ViewBag.EmployeeFilter = employees
             .Select(e => new SelectListItem

@@ -138,34 +138,12 @@ public class UserAccountsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> ResetPassword(int? id)
-    {
-        if (!id.HasValue) return NotFound();
-        var account = await _context.UserAccounts.FindAsync(id.Value);
-        if (account == null) return NotFound();
-        return View(new UserAccountResetPasswordViewModel { UserAccountId = account.UserAccountId, Username = account.Username });
-    }
+    public IActionResult ResetPassword(int? id) => Forbid();
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ResetPassword(int id, UserAccountResetPasswordViewModel model)
-    {
-        if (id != model.UserAccountId) return NotFound();
-        var account = await _context.UserAccounts.FindAsync(id);
-        if (account == null) return NotFound();
-        model.Username = account.Username;
-        ValidatePasswordRules(model.NewPassword, nameof(model.NewPassword));
-        if (!ModelState.IsValid) return View(model);
-        account.PasswordHash = _passwordHasher.HashPassword(account, model.NewPassword);
-        account.EncryptedPassword = account.Username.Equals("admin", StringComparison.OrdinalIgnoreCase) ? null : _passwordProtection.Protect(model.NewPassword);
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateException) { ModelState.AddModelError(string.Empty, "The password could not be updated."); return View(model); }
-        TempData["SuccessMessage"] = "Password updated successfully.";
-        return RedirectToAction(nameof(Details), new { id = account.UserAccountId });
-    }
+    public IActionResult ResetPassword(int id, UserAccountResetPasswordViewModel model) => Forbid();
+
 
     private async Task PopulateEmployeesAsync(int? selectedEmployeeId = null)
     {
