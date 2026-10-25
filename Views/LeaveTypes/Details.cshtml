@@ -91,69 +91,7 @@
                                 </span>
                             }
                         </dd>
-
-                        <dt class="col-sm-5">
-                            Leave Balances
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @Model.LeaveBalances.Count
-                        </dd>
-
-                        <dt class="col-sm-5">
-                            Leave Requests
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @Model.LeaveRequests.Count
-                        </dd>
                     </dl>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <strong>Employees with Balances</strong>
-                </div>
-
-                <div class="card-body p-0">
-                    @if (!Model.LeaveBalances.Any())
-                    {
-                        <div class="p-4 text-center text-muted">
-                            No leave balances have been created.
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Employee</th>
-                                        <th>Code</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    @foreach (var balance in Model.LeaveBalances)
-                                    {
-                                        <tr>
-                                            <td>
-                                                @balance.Employee.FirstName
-                                                @balance.Employee.LastName
-                                            </td>
-
-                                            <td>
-                                                @balance.Employee.EmployeeCode
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
                 </div>
             </div>
         </div>
