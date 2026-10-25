@@ -1,3 +1,4 @@
+
 using EMPTRACK.Data;
 using EMPTRACK.Models;
 using EMPTRACK.Models.ViewModels;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Task = System.Threading.Tasks.Task;
 
 using EMPTRACK.Services;
+
 namespace EMPTRACK.Controllers;
 
 [Authorize(Roles = "Admin,HR Head,Head Manager,Manager,HR,Employee")]
@@ -21,11 +23,35 @@ public class TeamsController : Controller
     }
 
     // GET: /Teams
+    // HR and Employees are redirected directly to their own team's details.
+    // Admin and management users retain their existing authorized list scopes.
     [HttpGet]
     public async Task<IActionResult> Index(
         string? search,
         int? departmentId)
     {
+        var current = await GetCurrentEmployeeAsync();
+
+        if (!User.IsInRole("Admin"))
+        {
+            if (current == null)
+            {
+                return Forbid();
+            }
+
+            if (current.Role == "Employee" || current.Role == "HR")
+            {
+                if (!current.TeamId.HasValue)
+                {
+                    return Forbid();
+                }
+
+                return RedirectToAction(
+                    nameof(Details),
+                    new { id = current.TeamId.Value });
+            }
+        }
+
         var query = _context.Teams
             .Include(t => t.Department)
             .Include(t => t.ManagerEmployee)
@@ -33,18 +59,49 @@ public class TeamsController : Controller
             .AsNoTracking()
             .AsQueryable();
 
-        var current = await GetCurrentEmployeeAsync();
         if (!User.IsInRole("Admin"))
         {
-            if (current == null) return Forbid();
-            if (current.Role == "Manager" && current.TeamId.HasValue)
-                query = query.Where(t => t.TeamId == current.TeamId.Value);
-            else if (current.Role == "Head Manager" && current.DepartmentId.HasValue)
-                query = query.Where(t => t.DepartmentId == current.DepartmentId.Value);
+            if (current == null)
+            {
+                return Forbid();
+            }
+
+            if (current.Role == "Manager")
+            {
+                if (!current.TeamId.HasValue)
+                {
+                    return Forbid();
+                }
+
+                query = query.Where(t =>
+                    t.TeamId == current.TeamId.Value);
+            }
+            else if (current.Role == "Head Manager")
+            {
+                if (!current.DepartmentId.HasValue)
+                {
+                    return Forbid();
+                }
+
+                query = query.Where(t =>
+                    t.DepartmentId == current.DepartmentId.Value);
+            }
             else if (current.Role == "HR Head")
             {
-                var departmentIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
-                query = query.Where(t => departmentIds.Contains(t.DepartmentId));
+                var departmentIds = await _context.Departments
+                    .AsNoTracking()
+                    .Where(d =>
+                        d.DepartmentId == current.DepartmentId ||
+                        d.HeadHREmployeeId == current.EmployeeId)
+                    .Select(d => d.DepartmentId)
+                    .ToListAsync();
+
+                query = query.Where(t =>
+                    departmentIds.Contains(t.DepartmentId));
+            }
+            else
+            {
+                return Forbid();
             }
         }
 
@@ -102,7 +159,11 @@ public class TeamsController : Controller
             return NotFound();
         }
 
-        if (!await CanReadTeamAsync(team)) return NotFound();
+        if (!await CanReadTeamAsync(team))
+        {
+            return NotFound();
+        }
+
         return View(team);
     }
 
@@ -111,9 +172,14 @@ public class TeamsController : Controller
     public async Task<IActionResult> Create()
     {
         if (User.IsInRole("Admin") ||
-            !(User.IsInRole("HR Head") || User.IsInRole("Head Manager")))
+            !(User.IsInRole("HR Head") ||
+              User.IsInRole("Head Manager")))
+        {
             return Forbid();
+        }
+
         var current = await GetCurrentEmployeeAsync();
+
         await PopulateDepartmentListAsync(current?.DepartmentId);
         await PopulateManagerListAsync(current?.DepartmentId);
 
@@ -127,10 +193,18 @@ public class TeamsController : Controller
         TeamCreateViewModel model)
     {
         if (User.IsInRole("Admin") ||
-            !(User.IsInRole("HR Head") || User.IsInRole("Head Manager")))
+            !(User.IsInRole("HR Head") ||
+              User.IsInRole("Head Manager")))
+        {
             return Forbid();
+        }
+
         model.Name = model.Name?.Trim() ?? string.Empty;
-        if (!await CanManageDepartmentAsync(model.DepartmentId)) return Forbid();
+
+        if (!await CanManageDepartmentAsync(model.DepartmentId))
+        {
+            return Forbid();
+        }
 
         await ValidateTeamAsync(
             model.DepartmentId,
@@ -140,6 +214,7 @@ public class TeamsController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateDepartmentListAsync(model.DepartmentId);
+
             await PopulateManagerListAsync(
                 model.DepartmentId,
                 model.ManagerEmployeeId);
@@ -167,6 +242,7 @@ public class TeamsController : Controller
                 "The team could not be saved. The team name or manager may already be in use.");
 
             await PopulateDepartmentListAsync(model.DepartmentId);
+
             await PopulateManagerListAsync(
                 model.DepartmentId,
                 model.ManagerEmployeeId);
@@ -184,8 +260,13 @@ public class TeamsController : Controller
     [HttpGet]
     public async Task<IActionResult> Edit(int? id)
     {
-        if (!(User.IsInRole("Admin") || User.IsInRole("HR Head") || User.IsInRole("Head Manager")))
+        if (!(User.IsInRole("Admin") ||
+              User.IsInRole("HR Head") ||
+              User.IsInRole("Head Manager")))
+        {
             return Forbid();
+        }
+
         if (!id.HasValue)
         {
             return NotFound();
@@ -200,7 +281,11 @@ public class TeamsController : Controller
         {
             return NotFound();
         }
-        if (!await CanManageTeamAsync(team)) return Forbid();
+
+        if (!await CanManageTeamAsync(team))
+        {
+            return Forbid();
+        }
 
         var model = new TeamEditViewModel
         {
@@ -210,8 +295,7 @@ public class TeamsController : Controller
             ManagerEmployeeId = team.ManagerEmployeeId
         };
 
-        await PopulateDepartmentListAsync(
-            model.DepartmentId);
+        await PopulateDepartmentListAsync(model.DepartmentId);
 
         await PopulateManagerListAsync(
             model.DepartmentId,
@@ -227,8 +311,13 @@ public class TeamsController : Controller
         int id,
         TeamEditViewModel model)
     {
-        if (!(User.IsInRole("Admin") || User.IsInRole("HR Head") || User.IsInRole("Head Manager")))
+        if (!(User.IsInRole("Admin") ||
+              User.IsInRole("HR Head") ||
+              User.IsInRole("Head Manager")))
+        {
             return Forbid();
+        }
+
         if (id != model.TeamId)
         {
             return BadRequest();
@@ -244,11 +333,15 @@ public class TeamsController : Controller
         {
             return NotFound();
         }
-        if (!await CanManageTeamAsync(existingTeam) || (!User.IsInRole("Admin") && !await CanManageDepartmentAsync(model.DepartmentId))) return Forbid();
 
-        // A Team Department cannot be changed while employees are assigned
-        // to the Team because Employee.DepartmentId must stay consistent
-        // with Employee.TeamId -> Team.DepartmentId.
+        if (!await CanManageTeamAsync(existingTeam) ||
+            (!User.IsInRole("Admin") &&
+             !await CanManageDepartmentAsync(model.DepartmentId)))
+        {
+            return Forbid();
+        }
+
+        // A team's department cannot be changed while employees are assigned.
         if (model.DepartmentId != existingTeam.DepartmentId)
         {
             var hasAssignedEmployees = await _context.Employees
@@ -270,8 +363,7 @@ public class TeamsController : Controller
 
         if (!ModelState.IsValid)
         {
-            await PopulateDepartmentListAsync(
-                model.DepartmentId);
+            await PopulateDepartmentListAsync(model.DepartmentId);
 
             await PopulateManagerListAsync(
                 model.DepartmentId,
@@ -280,14 +372,9 @@ public class TeamsController : Controller
             return View(model);
         }
 
-        existingTeam.DepartmentId =
-            model.DepartmentId;
-
-        existingTeam.Name =
-            model.Name;
-
-        existingTeam.ManagerEmployeeId =
-            model.ManagerEmployeeId;
+        existingTeam.DepartmentId = model.DepartmentId;
+        existingTeam.Name = model.Name;
+        existingTeam.ManagerEmployeeId = model.ManagerEmployeeId;
 
         try
         {
@@ -299,8 +386,7 @@ public class TeamsController : Controller
                 string.Empty,
                 "The team could not be updated. The team name or manager may already be in use.");
 
-            await PopulateDepartmentListAsync(
-                model.DepartmentId);
+            await PopulateDepartmentListAsync(model.DepartmentId);
 
             await PopulateManagerListAsync(
                 model.DepartmentId,
@@ -315,74 +401,205 @@ public class TeamsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // GET: /Teams/Delete/5
     [HttpGet]
     public async Task<IActionResult> Delete(int? id)
     {
-        if (!id.HasValue) return NotFound();
-        if (!(User.IsInRole("Admin") || User.IsInRole("HR Head") || User.IsInRole("Head Manager"))) return Forbid();
-        var team = await _context.Teams.Include(t => t.Department).Include(t => t.ManagerEmployee).AsNoTracking().SingleOrDefaultAsync(t => t.TeamId == id.Value);
-        if (team == null) return NotFound();
-        if (!await CanManageTeamAsync(team)) return Forbid();
-        if (await _context.Employees.AnyAsync(e => e.TeamId == team.TeamId))
+        if (!id.HasValue)
         {
-            TempData["ErrorMessage"] = "This team cannot be deleted while employees are assigned to it. Reassign employees first.";
-            return RedirectToAction(nameof(Details), new { id = team.TeamId });
+            return NotFound();
         }
+
+        if (!(User.IsInRole("Admin") ||
+              User.IsInRole("HR Head") ||
+              User.IsInRole("Head Manager")))
+        {
+            return Forbid();
+        }
+
+        var team = await _context.Teams
+            .Include(t => t.Department)
+            .Include(t => t.ManagerEmployee)
+            .AsNoTracking()
+            .SingleOrDefaultAsync(t =>
+                t.TeamId == id.Value);
+
+        if (team == null)
+        {
+            return NotFound();
+        }
+
+        if (!await CanManageTeamAsync(team))
+        {
+            return Forbid();
+        }
+
+        if (await _context.Employees.AnyAsync(e =>
+                e.TeamId == team.TeamId))
+        {
+            TempData["ErrorMessage"] =
+                "This team cannot be deleted while employees are assigned to it. Reassign employees first.";
+
+            return RedirectToAction(
+                nameof(Details),
+                new { id = team.TeamId });
+        }
+
         return View(team);
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    // POST: /Teams/DeleteConfirmed/5
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        if (!(User.IsInRole("Admin") || User.IsInRole("HR Head") || User.IsInRole("Head Manager"))) return Forbid();
-        var team = await _context.Teams.SingleOrDefaultAsync(t => t.TeamId == id);
-        if (team == null) return NotFound();
-        if (!await CanManageTeamAsync(team)) return Forbid();
-        if (await _context.Employees.AnyAsync(e => e.TeamId == team.TeamId))
+        if (!(User.IsInRole("Admin") ||
+              User.IsInRole("HR Head") ||
+              User.IsInRole("Head Manager")))
         {
-            TempData["ErrorMessage"] = "This team cannot be deleted while employees are assigned to it.";
-            return RedirectToAction(nameof(Details), new { id });
+            return Forbid();
         }
+
+        var team = await _context.Teams
+            .SingleOrDefaultAsync(t => t.TeamId == id);
+
+        if (team == null)
+        {
+            return NotFound();
+        }
+
+        if (!await CanManageTeamAsync(team))
+        {
+            return Forbid();
+        }
+
+        if (await _context.Employees.AnyAsync(e =>
+                e.TeamId == team.TeamId))
+        {
+            TempData["ErrorMessage"] =
+                "This team cannot be deleted while employees are assigned to it.";
+
+            return RedirectToAction(
+                nameof(Details),
+                new { id });
+        }
+
         _context.Teams.Remove(team);
-        try { await _context.SaveChangesAsync(); }
-        catch (DbUpdateException) { TempData["ErrorMessage"] = "This team is referenced by existing records and cannot be deleted."; return RedirectToAction(nameof(Index)); }
-        TempData["SuccessMessage"] = "Team deleted successfully.";
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            TempData["ErrorMessage"] =
+                "This team is referenced by existing records and cannot be deleted.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        TempData["SuccessMessage"] =
+            "Team deleted successfully.";
+
         return RedirectToAction(nameof(Index));
     }
 
     private async Task<Employee?> GetCurrentEmployeeAsync()
     {
         var raw = User.FindFirst("EmployeeId")?.Value;
-        if (!int.TryParse(raw, out var id)) return null;
-        return await _context.Employees.AsNoTracking().SingleOrDefaultAsync(e => e.EmployeeId == id);
+
+        if (!int.TryParse(raw, out var id))
+        {
+            return null;
+        }
+
+        return await _context.Employees
+            .AsNoTracking()
+            .SingleOrDefaultAsync(e => e.EmployeeId == id);
     }
 
     private async Task<bool> CanManageDepartmentAsync(int departmentId)
     {
-        if (User.IsInRole("Admin")) return false; // Admin is explicitly not permitted to create teams.
+        // Admin is not permitted to create teams under the existing policy.
+        if (User.IsInRole("Admin"))
+        {
+            return false;
+        }
+
         var employee = await GetCurrentEmployeeAsync();
-        if (employee == null) return false;
-        if (employee.Role == "Head Manager") return employee.DepartmentId == departmentId;
+
+        if (employee == null)
+        {
+            return false;
+        }
+
+        if (employee.Role == "Head Manager")
+        {
+            return employee.DepartmentId == departmentId;
+        }
+
         if (employee.Role == "HR Head")
-            return employee.DepartmentId == departmentId || await _context.Departments.AnyAsync(d => d.DepartmentId == departmentId && d.HeadHREmployeeId == employee.EmployeeId);
+        {
+            return employee.DepartmentId == departmentId ||
+                   await _context.Departments.AnyAsync(d =>
+                       d.DepartmentId == departmentId &&
+                       d.HeadHREmployeeId == employee.EmployeeId);
+        }
+
         return false;
     }
 
     private async Task<bool> CanManageTeamAsync(Team team)
     {
-        if (User.IsInRole("Admin")) return true;
+        if (User.IsInRole("Admin"))
+        {
+            return true;
+        }
+
         return await CanManageDepartmentAsync(team.DepartmentId);
     }
 
     private async Task<bool> CanReadTeamAsync(Team team)
     {
-        if (User.IsInRole("Admin")) return true;
+        if (User.IsInRole("Admin"))
+        {
+            return true;
+        }
+
         var employee = await GetCurrentEmployeeAsync();
-        if (employee == null) return false;
-        if (employee.Role == "Manager") return employee.TeamId == team.TeamId;
-        if (employee.Role == "Head Manager") return employee.DepartmentId == team.DepartmentId;
-        if (employee.Role == "HR Head") return employee.DepartmentId == team.DepartmentId || await _context.Departments.AnyAsync(d => d.DepartmentId == team.DepartmentId && d.HeadHREmployeeId == employee.EmployeeId);
-        return true;
+
+        if (employee == null)
+        {
+            return false;
+        }
+
+        if (employee.Role == "Manager")
+        {
+            return employee.TeamId == team.TeamId;
+        }
+
+        if (employee.Role == "Head Manager")
+        {
+            return employee.DepartmentId == team.DepartmentId;
+        }
+
+        if (employee.Role == "HR Head")
+        {
+            return employee.DepartmentId == team.DepartmentId ||
+                   await _context.Departments.AnyAsync(d =>
+                       d.DepartmentId == team.DepartmentId &&
+                       d.HeadHREmployeeId == employee.EmployeeId);
+        }
+
+        // HR and Employees can read only their currently assigned team.
+        if (employee.Role == "HR" || employee.Role == "Employee")
+        {
+            return employee.TeamId.HasValue &&
+                   employee.TeamId.Value == team.TeamId;
+        }
+
+        // Deny access by default for all other roles.
+        return false;
     }
 
     private async Task ValidateTeamAsync(
@@ -392,8 +609,7 @@ public class TeamsController : Controller
         int? existingTeamId = null)
     {
         var departmentExists = await _context.Departments
-            .AnyAsync(d =>
-                d.DepartmentId == departmentId);
+            .AnyAsync(d => d.DepartmentId == departmentId);
 
         if (!departmentExists)
         {
@@ -493,8 +709,7 @@ public class TeamsController : Controller
             {
                 Value = d.DepartmentId.ToString(),
                 Text = $"{d.Code} - {d.Name}",
-                Selected =
-                    selectedDepartmentId == d.DepartmentId
+                Selected = selectedDepartmentId == d.DepartmentId
             })
             .ToList();
     }
@@ -524,10 +739,8 @@ public class TeamsController : Controller
             .Select(e => new SelectListItem
             {
                 Value = e.EmployeeId.ToString(),
-                Text =
-                    $"{e.EmployeeCode} - {e.FirstName} {e.LastName}",
-                Selected =
-                    selectedManagerId == e.EmployeeId
+                Text = $"{e.EmployeeCode} - {e.FirstName} {e.LastName}",
+                Selected = selectedManagerId == e.EmployeeId
             })
             .ToList();
     }
@@ -535,28 +748,62 @@ public class TeamsController : Controller
     private async Task PopulateDepartmentFilterAsync(
         int? selectedDepartmentId = null)
     {
-        var departmentsQuery = _context.Departments.AsNoTracking().AsQueryable();
-        if (!User.IsInRole("Admin") && (User.IsInRole("Manager") || User.IsInRole("Head Manager") || User.IsInRole("HR Head")))
+        var departmentsQuery = _context.Departments
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (!User.IsInRole("Admin") &&
+            (User.IsInRole("Manager") ||
+             User.IsInRole("Head Manager") ||
+             User.IsInRole("HR Head")))
         {
             var current = await GetCurrentEmployeeAsync();
-            if (current == null) { ViewBag.DepartmentFilter = new List<SelectListItem>(); return; }
-            if (current.Role == "Manager") departmentsQuery = current.DepartmentId.HasValue ? departmentsQuery.Where(d => d.DepartmentId == current.DepartmentId.Value) : departmentsQuery.Where(d => false);
-            else if (current.Role == "Head Manager") departmentsQuery = current.DepartmentId.HasValue ? departmentsQuery.Where(d => d.DepartmentId == current.DepartmentId.Value) : departmentsQuery.Where(d => false);
+
+            if (current == null)
+            {
+                ViewBag.DepartmentFilter = new List<SelectListItem>();
+                return;
+            }
+
+            if (current.Role == "Manager")
+            {
+                departmentsQuery = current.DepartmentId.HasValue
+                    ? departmentsQuery.Where(d =>
+                        d.DepartmentId == current.DepartmentId.Value)
+                    : departmentsQuery.Where(d => false);
+            }
+            else if (current.Role == "Head Manager")
+            {
+                departmentsQuery = current.DepartmentId.HasValue
+                    ? departmentsQuery.Where(d =>
+                        d.DepartmentId == current.DepartmentId.Value)
+                    : departmentsQuery.Where(d => false);
+            }
             else
             {
-                var departmentIds = await _context.Departments.AsNoTracking().Where(d => d.DepartmentId == current.DepartmentId || d.HeadHREmployeeId == current.EmployeeId).Select(d => d.DepartmentId).ToListAsync();
-                departmentsQuery = departmentsQuery.Where(d => departmentIds.Contains(d.DepartmentId));
+                var departmentIds = await _context.Departments
+                    .AsNoTracking()
+                    .Where(d =>
+                        d.DepartmentId == current.DepartmentId ||
+                        d.HeadHREmployeeId == current.EmployeeId)
+                    .Select(d => d.DepartmentId)
+                    .ToListAsync();
+
+                departmentsQuery = departmentsQuery.Where(d =>
+                    departmentIds.Contains(d.DepartmentId));
             }
         }
-        var departments = await departmentsQuery.OrderBy(d => d.Name).ToListAsync();
+
+        var departments = await departmentsQuery
+            .OrderBy(d => d.Name)
+            .ToListAsync();
 
         ViewBag.DepartmentFilter = departments
             .Select(d => new SelectListItem
             {
                 Value = d.DepartmentId.ToString(),
                 Text = $"{d.Code} - {d.Name}",
-                Selected =
-                    selectedDepartmentId == d.DepartmentId
+                Selected = selectedDepartmentId == d.DepartmentId
             })
             .ToList();
     }

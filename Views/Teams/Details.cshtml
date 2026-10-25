@@ -13,7 +13,6 @@
                 @if (Model.Department != null)
                 {
                     <span>
-                        @Model.Department.Code -
                         @Model.Department.Name
                     </span>
                 }
@@ -44,14 +43,6 @@
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-sm-5">
-                            Team ID
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @Model.TeamId
-                        </dd>
-
-                        <dt class="col-sm-5">
                             Team Name
                         </dt>
 
@@ -67,7 +58,6 @@
                             @if (Model.Department != null)
                             {
                                 <span>
-                                    @Model.Department.Code -
                                     @Model.Department.Name
                                 </span>
                             }

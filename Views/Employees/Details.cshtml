@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Employee Details"; var isAdmin = User.IsInRole("Admin"); var currentEmployeeId = int.TryParse(User.FindFirst("EmployeeId")?.Value, out var parsedEmployeeId) ? parsedEmployeeId : (int?)null; var canEdit = isAdmin || ((User.IsInRole("HR") || User.IsInRole("Employee")) && currentEmployeeId == Model.EmployeeId); }
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <div><h1>Employee Details</h1><p class="text-muted">View employee information.</p></div>
+        <div><h1>Employee Details</h1></div>
         <div>@if (canEdit) { <a asp-action="Edit" asp-route-id="@Model.EmployeeId" class="btn btn-primary">Edit</a> }<a asp-action="Index" class="btn btn-secondary ms-2">Back to Employees</a></div>
     </div>
     @if (TempData["SuccessMessage"] != null) { <div class="alert alert-success">@TempData["SuccessMessage"]</div> }
