@@ -29,23 +29,38 @@ public class NotificationsController : Controller
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        var employeeId = GetCurrentEmployeeId();
-
-        if (employeeId.HasValue)
+        // Admin can view all employee notifications.
+        if (User.IsInRole("Admin"))
         {
-            var notifications = await _context.Notifications
+            var allNotifications = await _context.Notifications
                 .Include(n => n.Employee)
                 .AsNoTracking()
-                .Where(n => n.EmployeeId == employeeId.Value)
                 .OrderBy(n => n.IsRead)
                 .ThenByDescending(n => n.CreatedAt)
                 .ThenByDescending(n => n.NotificationId)
                 .ToListAsync();
 
-            return View(notifications);
+            return View(allNotifications);
         }
 
-        return Forbid();
+        // Other users can view only their own notifications.
+        var employeeId = GetCurrentEmployeeId();
+
+        if (!employeeId.HasValue)
+        {
+            return Forbid();
+        }
+
+        var notifications = await _context.Notifications
+            .Include(n => n.Employee)
+            .AsNoTracking()
+            .Where(n => n.EmployeeId == employeeId.Value)
+            .OrderBy(n => n.IsRead)
+            .ThenByDescending(n => n.CreatedAt)
+            .ThenByDescending(n => n.NotificationId)
+            .ToListAsync();
+
+        return View(notifications);
     }
 
     // GET: /Notifications/Details/5
@@ -65,6 +80,12 @@ public class NotificationsController : Controller
         if (notification == null)
         {
             return NotFound();
+        }
+
+        // Admin can open any employee notification.
+        if (User.IsInRole("Admin"))
+        {
+            return View(notification);
         }
 
         var currentEmployeeId = GetCurrentEmployeeId();

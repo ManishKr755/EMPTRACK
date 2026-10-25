@@ -1,4 +1,4 @@
-﻿@model IEnumerable<EMPTRACK.Models.Department>
+@model IEnumerable<EMPTRACK.Models.Department>
 
 @{
     ViewData["Title"] = "Departments";
@@ -82,8 +82,7 @@
                             <tr>
                                 <th>Code</th>
                                 <th>Department</th>
-                                <th>Head Manager</th>
-                                <th>HR Head</th>
+                                <th>Head</th>
                                 <th>Employees</th>
                                 <th>Teams</th>
                                 <th class="text-end">Actions</th>
@@ -103,34 +102,18 @@
                                     </td>
 
                                     <td>
-                                        @if (department.HeadManager != null)
+                                        @{
+                                            var departmentHead = department.Code == "01"
+                                                ? department.HeadHREmployee
+                                                : department.HeadManager;
+                                        }
+                                        @if (departmentHead != null)
                                         {
-                                            <span>
-                                                @department.HeadManager.FirstName
-                                                @department.HeadManager.LastName
-                                            </span>
+                                            <span>@departmentHead.FirstName @departmentHead.LastName</span>
                                         }
                                         else
                                         {
-                                            <span class="text-muted">
-                                                Not assigned
-                                            </span>
-                                        }
-                                    </td>
-
-                                    <td>
-                                        @if (department.HeadHREmployee != null)
-                                        {
-                                            <span>
-                                                @department.HeadHREmployee.FirstName
-                                                @department.HeadHREmployee.LastName
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">
-                                                Not assigned
-                                            </span>
+                                            <span class="text-muted">Not assigned</span>
                                         }
                                     </td>
 

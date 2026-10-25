@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Task = System.Threading.Tasks.Task;
 
 using EMPTRACK.Services;
 namespace EMPTRACK.Controllers;
@@ -174,17 +175,17 @@ public class DepartmentsController : Controller
         if (!await CanEditDepartmentAsync(department))
             return Forbid();
 
+        var isHrDepartment = IsHRDepartment(department.Code);
         var model = new DepartmentEditViewModel
         {
             Code = department.Code,
             Name = department.Name,
-            HeadManagerEmployeeId = department.HeadManagerEmployeeId,
-            HeadHREmployeeId = department.HeadHREmployeeId
+            HeadEmployeeId = isHrDepartment
+                ? department.HeadHREmployeeId
+                : department.HeadManagerEmployeeId
         };
 
-        await PopulateHeadManagerListAsync(department.DepartmentId, model.HeadManagerEmployeeId);
-        await PopulateHRHeadListAsync(model.HeadHREmployeeId);
-
+        await PopulateDepartmentHeadListAsync(department, model.HeadEmployeeId);
         return View(model);
     }
 
@@ -193,7 +194,6 @@ public class DepartmentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, DepartmentEditViewModel model)
     {
-        // DepartmentId is taken from the route, not from the browser payload.
         var department = await _context.Departments
             .SingleOrDefaultAsync(d => d.DepartmentId == id);
 
@@ -208,25 +208,10 @@ public class DepartmentsController : Controller
 
         ValidateCodeFormat(model.Code);
 
-        var isHrDepartment = IsHRDepartment(department.Code);
+        // The department type is defined by its code. If the code is changed
+        // while the department has no employees, use the submitted code.
+        var isHrDepartment = IsHRDepartment(model.Code);
 
-        // HR has an HR Head and no Head Manager.
-        // Normal departments have a Head Manager and no HR Head.
-        if (isHrDepartment && model.HeadManagerEmployeeId.HasValue)
-        {
-            ModelState.AddModelError(
-                nameof(model.HeadManagerEmployeeId),
-                "The HR department cannot have a Head Manager.");
-        }
-
-        if (!isHrDepartment && model.HeadHREmployeeId.HasValue)
-        {
-            ModelState.AddModelError(
-                nameof(model.HeadHREmployeeId),
-                "Only the HR department can have an HR Head.");
-        }
-
-        // A department code cannot change once employees depend on it.
         if (!string.Equals(department.Code, model.Code, StringComparison.Ordinal))
         {
             var hasEmployees = await _context.Employees
@@ -243,36 +228,67 @@ public class DepartmentsController : Controller
         if (await _context.Departments.AnyAsync(d =>
                 d.DepartmentId != id && d.Code == model.Code))
         {
-            ModelState.AddModelError(
-                nameof(model.Code),
-                "A department with this code already exists.");
+            ModelState.AddModelError(nameof(model.Code), "A department with this code already exists.");
         }
 
         if (await _context.Departments.AnyAsync(d =>
-                d.DepartmentId != id &&
-                d.Name.ToUpper() == model.Name.ToUpper()))
+                d.DepartmentId != id && d.Name.ToUpper() == model.Name.ToUpper()))
         {
-            ModelState.AddModelError(
-                nameof(model.Name),
-                "A department with this name already exists.");
+            ModelState.AddModelError(nameof(model.Name), "A department with this name already exists.");
         }
 
-        await ValidateHeadEmployeesAsync(
-            department,
-            model.HeadManagerEmployeeId,
-            model.HeadHREmployeeId);
+        if (model.HeadEmployeeId.HasValue)
+        {
+            var head = await _context.Employees
+                .AsNoTracking()
+                .SingleOrDefaultAsync(e => e.EmployeeId == model.HeadEmployeeId.Value);
+
+            var requiredRole = isHrDepartment ? "HR Head" : "Head Manager";
+
+            if (head == null)
+            {
+                ModelState.AddModelError(nameof(model.HeadEmployeeId), "The selected department head does not exist.");
+            }
+            else
+            {
+                if (!string.Equals(head.Role, requiredRole, StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError(nameof(model.HeadEmployeeId), $"The selected employee must have the {requiredRole} role.");
+                }
+
+                if (head.DepartmentId != department.DepartmentId)
+                {
+                    ModelState.AddModelError(nameof(model.HeadEmployeeId), "The department head must belong to this department.");
+                }
+
+                if (!string.Equals(head.EmploymentStatus, "Active", StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError(nameof(model.HeadEmployeeId), "The department head must be an active employee.");
+                }
+            }
+        }
 
         if (!ModelState.IsValid)
         {
-            await PopulateHeadManagerListAsync(department.DepartmentId, model.HeadManagerEmployeeId);
-            await PopulateHRHeadListAsync(model.HeadHREmployeeId);
+            await PopulateDepartmentHeadListAsync(department, model.HeadEmployeeId);
             return View(model);
         }
 
         department.Code = model.Code;
         department.Name = model.Name;
-        department.HeadManagerEmployeeId = model.HeadManagerEmployeeId;
-        department.HeadHREmployeeId = model.HeadHREmployeeId;
+
+        // Keep the existing database relationships; the UI exposes only one
+        // Head field and maps it to the correct relationship for this department.
+        if (isHrDepartment)
+        {
+            department.HeadHREmployeeId = model.HeadEmployeeId;
+            department.HeadManagerEmployeeId = null;
+        }
+        else
+        {
+            department.HeadManagerEmployeeId = model.HeadEmployeeId;
+            department.HeadHREmployeeId = null;
+        }
 
         try
         {
@@ -280,86 +296,14 @@ public class DepartmentsController : Controller
         }
         catch (DbUpdateException)
         {
-            ModelState.AddModelError(
-                string.Empty,
-                "The department could not be updated. The department code or name may already exist.");
-
-            await PopulateHeadManagerListAsync(department.DepartmentId, model.HeadManagerEmployeeId);
-            await PopulateHRHeadListAsync(model.HeadHREmployeeId);
+            ModelState.AddModelError(string.Empty, "The department could not be updated. The department code or name may already exist.");
+            await PopulateDepartmentHeadListAsync(department, model.HeadEmployeeId);
             return View(model);
         }
 
         TempData["SuccessMessage"] = "Department updated successfully.";
         return RedirectToAction(nameof(Index));
     }
-
-    private async System.Threading.Tasks.Task ValidateHeadEmployeesAsync(
-        Department department,
-        int? headManagerEmployeeId,
-        int? hrHeadEmployeeId)
-    {
-        if (headManagerEmployeeId.HasValue)
-        {
-            var employee = await _context.Employees
-                .AsNoTracking()
-                .SingleOrDefaultAsync(e => e.EmployeeId == headManagerEmployeeId.Value);
-
-            if (employee == null)
-            {
-                ModelState.AddModelError(
-                    nameof(DepartmentEditViewModel.HeadManagerEmployeeId),
-                    "The selected Head Manager does not exist.");
-            }
-            else
-            {
-                if (!string.Equals(employee.Role, "Head Manager", StringComparison.OrdinalIgnoreCase))
-                {
-                    ModelState.AddModelError(
-                        nameof(DepartmentEditViewModel.HeadManagerEmployeeId),
-                        "The selected employee must have the Head Manager role.");
-                }
-
-                if (employee.DepartmentId != department.DepartmentId)
-                {
-                    ModelState.AddModelError(
-                        nameof(DepartmentEditViewModel.HeadManagerEmployeeId),
-                        "The Head Manager must belong to this department.");
-                }
-            }
-        }
-
-        if (hrHeadEmployeeId.HasValue)
-        {
-            var employee = await _context.Employees
-                .AsNoTracking()
-                .SingleOrDefaultAsync(e => e.EmployeeId == hrHeadEmployeeId.Value);
-
-            if (employee == null)
-            {
-                ModelState.AddModelError(
-                    nameof(DepartmentEditViewModel.HeadHREmployeeId),
-                    "The selected HR Head does not exist.");
-            }
-            else
-            {
-                if (!string.Equals(employee.Role, "HR Head", StringComparison.OrdinalIgnoreCase))
-                {
-                    ModelState.AddModelError(
-                        nameof(DepartmentEditViewModel.HeadHREmployeeId),
-                        "The selected employee must have the HR Head role.");
-                }
-
-                if (employee.DepartmentId != department.DepartmentId ||
-                    !IsHRDepartment(department.Code))
-                {
-                    ModelState.AddModelError(
-                        nameof(DepartmentEditViewModel.HeadHREmployeeId),
-                        "The HR Head must belong to the HR department.");
-                }
-            }
-        }
-    }
-
 
     private async Task<bool> CanEditDepartmentAsync(Department department)
     {
@@ -407,43 +351,23 @@ public class DepartmentsController : Controller
         return string.Equals(code?.Trim(), HrDepartmentCode, StringComparison.OrdinalIgnoreCase);
     }
 
-    private async System.Threading.Tasks.Task PopulateHeadManagerListAsync(
-    int departmentId,
-    int? selectedEmployeeId = null)
+    private async Task PopulateDepartmentHeadListAsync(
+        Department department,
+        int? selectedEmployeeId = null)
     {
+        var isHrDepartment = IsHRDepartment(department.Code);
+        var requiredRole = isHrDepartment ? "HR Head" : "Head Manager";
+
         var employees = await _context.Employees
             .AsNoTracking()
-            .Where(e =>
-                e.Role == "Head Manager" &&
-                e.EmploymentStatus == "Active" &&
-                e.DepartmentId == departmentId)
+            .Where(e => e.Role == requiredRole &&
+                        e.EmploymentStatus == "Active" &&
+                        e.DepartmentId == department.DepartmentId)
             .OrderBy(e => e.FirstName)
             .ThenBy(e => e.LastName)
             .ToListAsync();
 
-        ViewBag.HeadManagers = employees.Select(e => new SelectListItem
-        {
-            Value = e.EmployeeId.ToString(),
-            Text = $"{e.EmployeeCode} - {e.FirstName} {e.LastName}",
-            Selected = selectedEmployeeId == e.EmployeeId
-        }).ToList();
-    }
-
-    private async System.Threading.Tasks.Task PopulateHRHeadListAsync(
-    int? selectedEmployeeId = null)
-    {
-        var employees = await _context.Employees
-            .AsNoTracking()
-            .Where(e =>
-                e.Role == "HR Head" &&
-                e.EmploymentStatus == "Active" &&
-                e.Department != null &&
-                e.Department.Code == HrDepartmentCode)
-            .OrderBy(e => e.FirstName)
-            .ThenBy(e => e.LastName)
-            .ToListAsync();
-
-        ViewBag.HRHeads = employees.Select(e => new SelectListItem
+        ViewBag.DepartmentHeads = employees.Select(e => new SelectListItem
         {
             Value = e.EmployeeId.ToString(),
             Text = $"{e.EmployeeCode} - {e.FirstName} {e.LastName}",

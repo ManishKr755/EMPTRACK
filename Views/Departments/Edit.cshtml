@@ -1,4 +1,4 @@
-﻿@model EMPTRACK.Models.ViewModels.DepartmentEditViewModel
+@model EMPTRACK.Models.ViewModels.DepartmentEditViewModel
 
 @{
     ViewData["Title"] = "Edit Department";
@@ -47,41 +47,19 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label asp-for="HeadManagerEmployeeId"
-                               class="form-label">
-                        </label>
+                        <label asp-for="HeadEmployeeId" class="form-label"></label>
 
-                        <select asp-for="HeadManagerEmployeeId"
-                                asp-items="ViewBag.HeadManagers"
+                        <select asp-for="HeadEmployeeId"
+                                asp-items="ViewBag.DepartmentHeads"
                                 class="form-select">
-                            <option value="">-- No Head Manager --</option>
+                            <option value="">-- No Head Assigned --</option>
                         </select>
 
                         <div class="form-text">
-                            The Head Manager must belong to this department.
+                            The HR department uses an HR Head. All other departments use a Head Manager.
                         </div>
 
-                        <span asp-validation-for="HeadManagerEmployeeId"
-                              class="text-danger"></span>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label asp-for="HeadHREmployeeId"
-                               class="form-label">
-                        </label>
-
-                        <select asp-for="HeadHREmployeeId"
-                                asp-items="ViewBag.HRHeads"
-                                class="form-select">
-                            <option value="">-- No HR Head --</option>
-                        </select>
-
-                        <div class="form-text">
-                            HR Head can only be assigned to the HR department.
-                        </div>
-
-                        <span asp-validation-for="HeadHREmployeeId"
-                              class="text-danger"></span>
+                        <span asp-validation-for="HeadEmployeeId" class="text-danger"></span>
                     </div>
                 </div>
 

@@ -1,4 +1,4 @@
-﻿@model EMPTRACK.Models.Department
+@model EMPTRACK.Models.Department
 
 @{
     ViewData["Title"] = "Department Details";
@@ -53,54 +53,25 @@
                         </dd>
 
                         <dt class="col-sm-5">
-                            Head Manager
+                            Head
                         </dt>
 
                         <dd class="col-sm-7">
-                            @if (Model.HeadManager != null)
+                            @{
+                                var departmentHead = Model.Code == "01"
+                                    ? Model.HeadHREmployee
+                                    : Model.HeadManager;
+                            }
+                            @if (departmentHead != null)
                             {
                                 <div>
-                                    <strong>
-                                        @Model.HeadManager.FirstName
-                                        @Model.HeadManager.LastName
-                                    </strong>
+                                    <strong>@departmentHead.FirstName @departmentHead.LastName</strong>
                                 </div>
-
-                                <small class="text-muted">
-                                    @Model.HeadManager.EmployeeCode
-                                </small>
+                                <small class="text-muted">@departmentHead.EmployeeCode</small>
                             }
                             else
                             {
-                                <span class="text-muted">
-                                    Not assigned
-                                </span>
-                            }
-                        </dd>
-
-                        <dt class="col-sm-5">
-                            HR Head
-                        </dt>
-
-                        <dd class="col-sm-7">
-                            @if (Model.HeadHREmployee != null)
-                            {
-                                <div>
-                                    <strong>
-                                        @Model.HeadHREmployee.FirstName
-                                        @Model.HeadHREmployee.LastName
-                                    </strong>
-                                </div>
-
-                                <small class="text-muted">
-                                    @Model.HeadHREmployee.EmployeeCode
-                                </small>
-                            }
-                            else
-                            {
-                                <span class="text-muted">
-                                    Not assigned
-                                </span>
+                                <span class="text-muted">Not assigned</span>
                             }
                         </dd>
 

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
+using Task = System.Threading.Tasks.Task;
 
 namespace EMPTRACK.Controllers;
 
@@ -358,6 +359,8 @@ public class EmployeesController : Controller
         try
         {
             await _context.SaveChangesAsync();
+            await SyncDepartmentHeadAsync(employee, oldDepartmentId: null);
+            await _context.SaveChangesAsync();
             await _leaveBalanceService.EnsureAndAccrueAsync();
             await onboardingTransaction.CommitAsync();
         }
@@ -536,6 +539,10 @@ public class EmployeesController : Controller
             return View(model);
         }
 
+        // Preserve the previous assignment so a department head relationship
+        // can be cleared if this employee changes role, department, or status.
+        var oldDepartmentId = employee.DepartmentId;
+
         // EmployeeCode remains permanent when department or role changes.
         employee.FirstName = model.FirstName.Trim();
         employee.LastName = model.LastName.Trim();
@@ -587,6 +594,7 @@ public class EmployeesController : Controller
 
         try
         {
+            await SyncDepartmentHeadAsync(employee, oldDepartmentId);
             await _context.SaveChangesAsync();
             await _leaveBalanceService.EnsureAndAccrueAsync();
 
@@ -621,6 +629,71 @@ public class EmployeesController : Controller
     // ============================================================
     // CREATE FORM DATA
     // ============================================================
+
+    private async Task SyncDepartmentHeadAsync(
+        Employee employee,
+        int? oldDepartmentId)
+    {
+        // Remove stale head references when an existing head changes department,
+        // role, or employment status. Database relationships are retained.
+        if (oldDepartmentId.HasValue)
+        {
+            var oldDepartment = await _context.Departments
+                .SingleOrDefaultAsync(d => d.DepartmentId == oldDepartmentId.Value);
+
+            if (oldDepartment != null)
+            {
+                if (oldDepartment.HeadManagerEmployeeId == employee.EmployeeId &&
+                    (!string.Equals(employee.Role, "Head Manager", StringComparison.OrdinalIgnoreCase) ||
+                     employee.DepartmentId != oldDepartment.DepartmentId ||
+                     !string.Equals(employee.EmploymentStatus, "Active", StringComparison.OrdinalIgnoreCase)))
+                {
+                    oldDepartment.HeadManagerEmployeeId = null;
+                }
+
+                if (oldDepartment.HeadHREmployeeId == employee.EmployeeId &&
+                    (!string.Equals(employee.Role, "HR Head", StringComparison.OrdinalIgnoreCase) ||
+                     employee.DepartmentId != oldDepartment.DepartmentId ||
+                     !string.Equals(employee.EmploymentStatus, "Active", StringComparison.OrdinalIgnoreCase)))
+                {
+                    oldDepartment.HeadHREmployeeId = null;
+                }
+            }
+        }
+
+        if (!employee.DepartmentId.HasValue ||
+            !string.Equals(employee.EmploymentStatus, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var department = await _context.Departments
+            .SingleOrDefaultAsync(d => d.DepartmentId == employee.DepartmentId.Value);
+
+        if (department == null)
+        {
+            return;
+        }
+
+        var isHrDepartment = string.Equals(department.Code, "01", StringComparison.OrdinalIgnoreCase);
+
+        if (isHrDepartment && string.Equals(employee.Role, "HR Head", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!department.HeadHREmployeeId.HasValue || department.HeadHREmployeeId == employee.EmployeeId)
+            {
+                department.HeadHREmployeeId = employee.EmployeeId;
+                department.HeadManagerEmployeeId = null;
+            }
+        }
+        else if (!isHrDepartment && string.Equals(employee.Role, "Head Manager", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!department.HeadManagerEmployeeId.HasValue || department.HeadManagerEmployeeId == employee.EmployeeId)
+            {
+                department.HeadManagerEmployeeId = employee.EmployeeId;
+                department.HeadHREmployeeId = null;
+            }
+        }
+    }
 
     private int? CurrentEmployeeId()
     {

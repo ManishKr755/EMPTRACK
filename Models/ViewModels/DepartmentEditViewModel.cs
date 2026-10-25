@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EMPTRACK.Models.ViewModels;
 
@@ -14,9 +14,6 @@ public class DepartmentEditViewModel
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
 
-    [Display(Name = "Head Manager")]
-    public int? HeadManagerEmployeeId { get; set; }
-
-    [Display(Name = "HR Head")]
-    public int? HeadHREmployeeId { get; set; }
+    [Display(Name = "Head")]
+    public int? HeadEmployeeId { get; set; }
 }
