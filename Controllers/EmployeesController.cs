@@ -830,26 +830,31 @@ public class EmployeesController : Controller
 
     private async Task<List<string>> GetEmploymentStatusesAsync()
     {
-        var statuses = await _context.Employees
+        // Always show the supported status choices, even when the database
+        // currently contains only "Active" employees. Keep legacy/custom
+        // values already stored so editing an existing record remains safe.
+        var standardStatuses = new[]
+        {
+            "Active",
+            "Inactive",
+            "On Leave",
+            "Resigned",
+            "Terminated"
+        };
+
+        var existingStatuses = await _context.Employees
             .AsNoTracking()
+            .Where(e => e.EmploymentStatus != null && e.EmploymentStatus != "")
             .Select(e => e.EmploymentStatus)
             .Distinct()
-            .OrderBy(s => s)
             .ToListAsync();
 
-        if (statuses.Count == 0)
-        {
-            statuses = new List<string>
-            {
-                "Active",
-                "Inactive",
-                "On Leave",
-                "Resigned",
-                "Terminated"
-            };
-        }
-
-        return statuses;
+        return standardStatuses
+            .Concat(existingStatuses)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(s => Array.IndexOf(standardStatuses, s) < 0 ? 1 : 0)
+            .ThenBy(s => s)
+            .ToList();
     }
 
     // ============================================================

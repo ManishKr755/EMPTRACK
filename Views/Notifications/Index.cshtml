@@ -25,26 +25,25 @@
             </p>
         </div>
 
-        @if (isManagementUser)
-        {
-            <a asp-action="Create"
-               class="btn btn-primary">
-                + New Notification
-            </a>
-        }
-        else if (unreadCount > 0)
-        {
-            <form asp-action="MarkAllAsRead"
-                  method="post">
+        <div class="d-flex gap-2">
+            @if (isManagementUser)
+            {
+                <a asp-action="Create"
+                   class="btn btn-primary">
+                    + New Notification
+                </a>
+            }
 
-                @Html.AntiForgeryToken()
-
-                <button type="submit"
-                        class="btn btn-outline-success">
-                    Mark All as Read
-                </button>
-            </form>
-        }
+            @if (unreadCount > 0 && Model.Any(n => User.FindFirst("EmployeeId")?.Value == n.EmployeeId.ToString() && !n.IsRead))
+            {
+                <form asp-action="MarkAllAsRead" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-success">
+                        Mark My Notifications as Read
+                    </button>
+                </form>
+            }
+        </div>
     </div>
 
     @if (TempData["SuccessMessage"] != null)
@@ -160,7 +159,7 @@
                                             Details
                                         </a>
 
-                                        @if (!isManagementUser && !notification.IsRead)
+                                        @if (User.FindFirst("EmployeeId")?.Value == notification.EmployeeId.ToString() && !notification.IsRead)
                                         {
                                             <form asp-action="MarkAsRead"
                                                   asp-route-id="@notification.NotificationId"

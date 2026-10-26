@@ -120,7 +120,7 @@
                         </dd>
                     </dl>
 
-                    @if (!isManagementUser && !Model.IsRead)
+                    @if (User.FindFirst("EmployeeId")?.Value == Model.EmployeeId.ToString() && !Model.IsRead)
                     {
                         <hr />
 
