@@ -476,13 +476,16 @@ public class LeaveRequestsController : Controller
         return View(model);
     }
 
+
     // POST: /LeaveRequests/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         LeaveRequestCreateViewModel model)
     {
-        if (User.IsInRole("Admin")) return Forbid();
+        if (User.IsInRole("Admin"))
+            return Forbid();
+
         var currentUser = await GetCurrentUserAccountAsync();
 
         if (currentUser?.EmployeeId == null ||
@@ -533,6 +536,8 @@ public class LeaveRequestsController : Controller
                 "Please enter a reason for the leave request.");
         }
 
+        // Preserve the existing rule that prevents overlapping
+        // pending or approved leave requests.
         if (model.EndDate >= model.StartDate)
         {
             var overlappingRequestExists =
@@ -562,10 +567,148 @@ public class LeaveRequestsController : Controller
             return View(model);
         }
 
+        // Update or create balances and apply current accruals
+        // before validating the employee's available balance.
+        await _leaveBalanceService.EnsureAndAccrueAsync();
+
+        var availableBalance =
+            await _context.LeaveBalances
+                .AsNoTracking()
+                .Where(lb =>
+                    lb.EmployeeId == employeeId &&
+                    lb.LeaveTypeId == model.LeaveTypeId)
+                .Select(lb => (decimal?)lb.AvailableLeaves)
+                .SingleOrDefaultAsync();
+
+        if (!availableBalance.HasValue)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "Your leave balance is not available for this leave type. Please contact HR.");
+
+            await PopulateLeaveTypeListAsync(
+                employeeId,
+                model.LeaveTypeId);
+
+            ViewBag.CurrentEmployee = currentUser.Employee;
+
+            return View(model);
+        }
+
+        if (availableBalance.Value <= 0)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "You cannot request this leave because your available balance is zero or negative.");
+
+            await PopulateLeaveTypeListAsync(
+                employeeId,
+                model.LeaveTypeId);
+
+            ViewBag.CurrentEmployee = currentUser.Employee;
+
+            return View(model);
+        }
+
+        // Load the holidays recorded in EMPTRACK.
+        // Holidays do not consume leave days.
+        var holidayDates = (await _context.Holidays
+            .AsNoTracking()
+            .Select(h => h.Date)
+            .ToListAsync())
+            .ToHashSet();
+
+        // Count requested calendar dates, excluding company holidays.
+        // The start and end dates are inclusive.
+        static int CountLeaveDays(
+            DateOnly startDate,
+            DateOnly endDate,
+            HashSet<DateOnly> holidays)
+        {
+            var count = 0;
+
+            for (var date = startDate;
+                 date <= endDate;
+                 date = date.AddDays(1))
+            {
+                if (!holidays.Contains(date))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        var requestedDays = CountLeaveDays(
+            model.StartDate,
+            model.EndDate,
+            holidayDates);
+
+        if (requestedDays == 0)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "Your selected leave period contains only company holidays. Please select at least one non-holiday date.");
+
+            await PopulateLeaveTypeListAsync(
+                employeeId,
+                model.LeaveTypeId);
+
+            ViewBag.CurrentEmployee = currentUser.Employee;
+
+            return View(model);
+        }
+
+        // Include pending requests of the same leave type when
+        // calculating the balance available for another request.
+        var pendingRequests = await _context.LeaveRequests
+            .AsNoTracking()
+            .Where(lr =>
+                lr.EmployeeId == employeeId &&
+                lr.LeaveTypeId == model.LeaveTypeId &&
+                lr.Status == "Pending")
+            .Select(lr => new
+            {
+                lr.StartDate,
+                lr.EndDate
+            })
+            .ToListAsync();
+
+        var pendingDays = pendingRequests.Sum(lr =>
+            CountLeaveDays(
+                lr.StartDate,
+                lr.EndDate,
+                holidayDates));
+
+        var remainingBalance =
+            availableBalance.Value - pendingDays;
+
+        if (remainingBalance <= 0 ||
+            requestedDays > remainingBalance)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                $"Insufficient leave balance. " +
+                $"Current balance: {availableBalance.Value:0.##} day(s). " +
+                $"Pending requests: {pendingDays} day(s). " +
+                $"Available for a new request: " +
+                $"{Math.Max(0, remainingBalance):0.##} day(s). " +
+                $"Requested leave after excluding holidays: " +
+                $"{requestedDays} day(s).");
+
+            await PopulateLeaveTypeListAsync(
+                employeeId,
+                model.LeaveTypeId);
+
+            ViewBag.CurrentEmployee = currentUser.Employee;
+
+            return View(model);
+        }
+
         var leaveRequest = new LeaveRequest
         {
-            // EmployeeId is taken from the authenticated UserAccount.
-            // It is never accepted from the browser.
+            // EmployeeId comes from the authenticated account.
             EmployeeId = employeeId,
             LeaveTypeId = model.LeaveTypeId,
             StartDate = model.StartDate,
@@ -602,6 +745,7 @@ public class LeaveRequestsController : Controller
 
         return RedirectToAction(nameof(Index));
     }
+
 
     private async Task<bool> CanViewRequestAsync(UserAccount currentUser, LeaveRequest request)
     {
